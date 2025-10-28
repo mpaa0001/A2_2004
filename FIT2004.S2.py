@@ -7,6 +7,12 @@ def assign(L, roads, students, buses, D, T):
         adjacent_list[u].append((v, w))
         adjacent_list[v].append((u, w))
 
+
+    adjacent_list = [[] for _ in range(L)] #adjaceny list built
+    for u, v, w in roads:
+        adjacent_list[u].append((v, w))
+        adjacent_list[v].append((u, w))
+
     B = len(buses)  #numnber of buses
     S = len(students) #number of students
     infinity = float('inf') #infinity value for Dijkstra's algorithm
@@ -19,4 +25,15 @@ def assign(L, roads, students, buses, D, T):
         distances[pickup_point] = 0
         priority_queue = [(0, pickup_point)]
 
-        
+
+        while priority_queue:
+            current_distance, current_node = heapq.heappop(priority_queue)
+            if current_distance != distances[current_node]:
+                continue
+            for neighbor, weight in adjacent_list[current_node]:
+                new_distance = current_distance + weight
+                if new_distance < distances[neighbor] and new_distance <= D:
+                    distances[neighbor] = new_distance
+                    heapq.heappush(priority_queue, (new_distance, neighbor))
+
+                    
