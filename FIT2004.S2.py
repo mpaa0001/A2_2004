@@ -308,4 +308,4 @@ class Analyser:
                         self.max_frequency[pattern_length] = frequency
                         self.best_pattern_location[pattern_length] = (song_id, start_index)
                     
-                    
+                    frequ
