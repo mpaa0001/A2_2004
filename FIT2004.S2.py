@@ -76,11 +76,123 @@ def assign(L, roads, students, buses, D, T):
                     reachable_by_bus[bus_id].append(student_id)
                     buses_by_student[student_id].append(bus_id)
 
+        index += 1
 
+# flow netwrok
 
+    NETWORK_SOURCE = 0
+    NETWORK_SINK = 1
+    STUDENT_NODE_START = 2
+    BUS_NODE_START = STUDENT_NODE_START + S
+    DEMAND_SUPER_SOURCE = BUS_NODE_START + B
+    DEMAND_SUPER_SINK = DEMAND_SUPER_SOURCE + 1
+    NODE_COUNT = DEMAND_SUPER_SINK + 1
 
+    DEST, REV_INDEX, CAPACITY = 0, 1, 2
 
-       
+    graph = [[] for _ in range(NODE_COUNT)]
 
+    def add_edge(u, v, cap_value):
+        # forward edge
+        graph[u].append([v, len(graph[v]), cap_value])
+        # backward edge
+        graph[v].append([u, len(graph[u]) - 1, 0])
+
+    def bfs_find_path(source, sink, limit):
+        visited = [False] * NODE_COUNT
+        parent_node = [-1] * NODE_COUNT
+        parent_edge = [-1] * NODE_COUNT
+
+        queue = [0] * NODE_COUNT
+        head = 0
+        tail = 0
+        queue[tail] = source 
+        tail += 1
+        visited[source] = True
+
+        while head < tail:
+            u = queue[head]
+            head += 1
+            adjacent_u = graph[u]
+
+            j=0
+            while j < len(adjacent_u):
+                e = adjacent_u[j]
+                if e[CAPACITY] > 0:
+                    v = e[DEST]
+                    if not visited[v]:
+                        visited[v] = True
+                        parent_node[v] = u
+                        parent_edge[v] = j
+
+                        if v == sink:
+                            bottleneck = limit
+                            walk_node = sink
+                            while walk_node != source:
+                                prev_node = parent_node[walk_node]
+                                prev_edge_index = parent_edge[walk_node]
+                                edge_capacity = graph[prev_node][prev_edge_index][CAPACITY]
+                                if edge_capacity < bottleneck:
+                                    bottleneck = edge_capacity
+                                walk_node = prev_node
+                            return bottleneck, parent_node, parent_edge
+                        
+                        queue[tail] = v
+                        tail += 1
+                j += 1
+
+        return 0, parent_node, parent_edge
+    
+    def maxflow(source, sink, flow_limit):
+        total_flow = 0
+
+        while total_flow < flow_limit:
+            remaining = flow_limit - total_flow
+            pushed, parent_node, parent_edge = bfs_find_path(source, sink, remaining)
+            if pushed == 0:
+                break
+            
+    
+            node = sink
+            while node != source:
+                prev_node = parent_node[node]
+                edge_index = parent_edge[node]
+                e = graph[prev_node][edge_index]
+                e[CAPACITY] -= pushed
+                rev_edge_index = e[REV_INDEX]
+                graph[node][rev_edge_index][CAPACITY] += pushed
+                node = prev_node
+
+            total_flow += pushed
+
+        return total_flow
+    
+    student_id = 0
+    while student_id < S:
+        add_edge(NETWORK_SOURCE, STUDENT_NODE_START + student_id, 1)
+        student_id += 1
 
     
+    # student -> bus
+    for bus_id in range(B):
+        bus_node = BUS_NODE_START + bus_id
+        reachable_students = reachable_by_bus[bus_id]
+        for student_id in reachable_students:
+            add_edge(STUDENT_NODE_START + student_id, bus_node, 1)
+        
+
+
+    # bus -> sink 
+    demand = [0] * NODE_COUNT
+    for bus_id in range(B):
+        lower_bound = min_caps[bus_id]
+        upper_bound = max_caps[bus_id]
+        bus_node = BUS_NODE_START + bus_id
+
+        add_edge(bus_node, NETWORK_SINK, upper_bound - lower_bound)
+        demand[bus_node] -= lower_bound
+        demand[NETWORK_SINK] += lower_bound
+        
+
+    
+             
