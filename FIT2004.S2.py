@@ -308,4 +308,19 @@ class Analyser:
                         self.max_frequency[pattern_length] = frequency
                         self.best_pattern_location[pattern_length] = (song_id, start_index)
                     
-                    frequ
+                    
+    def getFrequentPaatern(self, K):
+        if K >= len(self.best_pattern_location):
+            return []
+        if self.best_pattern_location[K] is None:
+            return []
+        
+
+        location = self.best_pattern_location[K]
+        song_index = location[0]
+        start_index = location[1]   
+
+        song_with_best_pattern = self.sequences[song_index]
+
+        pattern_string = song_with_best_pattern[start_index:start_index + K]
+        return list(pattern_string)
