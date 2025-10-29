@@ -248,7 +248,6 @@ def assign(L, roads, students, buses, D, T):
 
 
 ##QUESTION 2##
-
 class Analyser:
     def __init__(self, sequences):
         
@@ -324,3 +323,66 @@ class Analyser:
 
         pattern_string = song_with_best_pattern[start_index:start_index + K]
         return list(pattern_string)
+    
+    
+
+# =============================================================================
+# --- TEST HARNESS ---
+# You can run this file to test the Analyser class.
+# =============================================================================
+
+if __name__ == "__main__":
+    
+    print("--- Analyser Test (No Dict/Set Version) ---")
+    
+    demo_songs = ["cegec", "gdfhd", "cdfhd"]
+    
+    print(f"Songs: {demo_songs}")
+    try:
+        start_time = time.time()
+        analyser = Analyser(demo_songs)
+        end_time = time.time()
+        print(f"__init__ took: {end_time - start_time:.6f} seconds")
+
+        # Test K=2
+        pattern_2 = analyser.getFrequentPattern(2)
+        print(f"K=2 => {pattern_2}")
+        if "".join(pattern_2) in ("df", "fh", "ce", "eg"):
+             print("K=2 Test: PASS (Found a valid pattern)")
+        else:
+             print(f"K=2 Test: UNEXPECTED (Got {''.join(pattern_2)})")
+
+        # Test K=3
+        pattern_3 = analyser.getFrequentPattern(3)
+        print(f"K=3 => {pattern_3}")
+        if "".join(pattern_3) in ("dfh", "ceg"):
+             print("K-3 Test: PASS (Found a valid pattern)")
+        else:
+             print(f"K-3 Test: UNEXPECTED (Got {''.join(pattern_3)})")
+
+        # Test K=4
+        pattern_4 = analyser.getFrequentPattern(4)
+        print(f"K=4 => {pattern_4}")
+        if "".join(pattern_4) == "dfhd":
+             print("K-4 Test: PASS (Found the only valid pattern)")
+        else:
+             print(f"K-4 Test: UNEXPECTED (Got {''.join(pattern_4)})")
+             
+        # Test K=5
+        pattern_5 = analyser.getFrequentPattern(5)
+        print(f"K=5 => {pattern_5}")
+        if "".join(pattern_5) in ("cegec", "gdfhd", "cdfhd"):
+             print("K-5 Test: PASS")
+        else:
+             print(f"K-5 Test: UNEXPECTED (Got {''.join(pattern_5)})")
+             
+        # Test K=6 (Out of bounds)
+        pattern_6 = analyser.getFrequentPattern(6)
+        print(f"K-6 => {pattern_6}")
+        if pattern_6 == []:
+             print("K-6 Test: PASS (Correctly returned empty list)")
+        else:
+             print(f"K-6 Test: FAIL (Got {pattern_6})")
+
+    except Exception as e:
+        print(f"\n--- !! An error occurred: {e} !! ---")
