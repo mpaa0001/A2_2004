@@ -309,7 +309,7 @@ class Analyser:
                         self.best_pattern_location[pattern_length] = (song_id, start_index)
                     
                     
-    def getFrequentPaatern(self, K):
+    def getFrequentPattern(self, K):
         if K >= len(self.best_pattern_location):
             return []
         if self.best_pattern_location[K] is None:
