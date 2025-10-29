@@ -10,6 +10,7 @@ def assign(L, roads, students, buses, D, T):
     B = len(buses)
     S = len(students)
 
+    # --- This is a good, efficient O(B) method ---
     unique_pickup_points = []
     buses_at_pickup_point = []
     pickup_to_index = [-1] * L
@@ -23,7 +24,6 @@ def assign(L, roads, students, buses, D, T):
             buses_at_pickup_point.append([bus_id])
         else:
             buses_at_pickup_point[j].append(bus_id)
-
 
 
     min_caps = [0] * B
@@ -40,7 +40,8 @@ def assign(L, roads, students, buses, D, T):
     if T < total_min or T > total_max:
         return None
     
-    infinity = max(total_max + 1, D + 1)
+
+    infinity = max(total_max + 1, D + 1) 
 
     def dijkstra_from(start_loc):
         distance = [infinity] * L
@@ -59,6 +60,7 @@ def assign(L, roads, students, buses, D, T):
                     distance[v] = new_distance
                     heapq.heappush(heap, (new_distance, v))
         return distance
+
     
     #reachability
     reachable_by_bus = [[] for _ in range(B)]
@@ -70,16 +72,16 @@ def assign(L, roads, students, buses, D, T):
         distance = dijkstra_from(pickup_location)
         bus_list = buses_at_pickup_point[index]
         
-        for student_id, pickup_location in enumerate(students):
-            if distance[pickup_location] <= D:
+       
+        for student_id, student_loc in enumerate(students): 
+            if distance[student_loc] <= D:
                 for bus_id in bus_list:
                     reachable_by_bus[bus_id].append(student_id)
                     buses_by_student[student_id].append(bus_id)
 
         index += 1
 
-# flow netwrok
-
+    # flow network
     NETWORK_SOURCE = 0
     NETWORK_SINK = 1
     STUDENT_NODE_START = 2
@@ -152,7 +154,6 @@ def assign(L, roads, students, buses, D, T):
             if pushed == 0:
                 break
             
-    
             node = sink
             while node != source:
                 prev_node = parent_node[node]
@@ -180,8 +181,6 @@ def assign(L, roads, students, buses, D, T):
         for student_id in reachable_students:
             add_edge(STUDENT_NODE_START + student_id, bus_node, 1)
         
-
-
     # bus -> sink 
     demand = [0] * NODE_COUNT
     for bus_id in range(B):
@@ -210,7 +209,7 @@ def assign(L, roads, students, buses, D, T):
     feasible_flow = maxflow(DEMAND_SUPER_SOURCE, DEMAND_SUPER_SINK, total_demand)
     if feasible_flow < total_demand:
         return None
-        
+    
     forward = graph[NETWORK_SINK][helper_edge_index_at_sink]
     forward[CAPACITY] = 0
     graph[NETWORK_SOURCE][forward[REV_INDEX]][CAPACITY] = 0
@@ -222,7 +221,6 @@ def assign(L, roads, students, buses, D, T):
     if maxflow(NETWORK_SOURCE, NETWORK_SINK, extra_needed) != extra_needed:
         return None
         
-
     allocation = [-1] * S
     for student_id in range(S):
         u = STUDENT_NODE_START + student_id
@@ -235,7 +233,7 @@ def assign(L, roads, students, buses, D, T):
                     allocation[student_id] = v - BUS_NODE_START
                     break    
             j += 1  
-               
+            
     assigned_count = 0
     i = 0
     while i < S:
@@ -244,20 +242,7 @@ def assign(L, roads, students, buses, D, T):
         i += 1
     if assigned_count != T:
         return None
+        
     return allocation
-    
 
 
-               
-
-
-
-                     
-
-
-
-
-
-
-    
-             
