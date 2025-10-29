@@ -192,7 +192,72 @@ def assign(L, roads, students, buses, D, T):
         add_edge(bus_node, NETWORK_SINK, upper_bound - lower_bound)
         demand[bus_node] -= lower_bound
         demand[NETWORK_SINK] += lower_bound
+
+    helper_edge_index_at_sink = len(graph[NETWORK_SINK]) 
+    add_edge(NETWORK_SINK, NETWORK_SOURCE, infinity)
+
+    total_demand = 0
+    node = 0
+    while node < NODE_COUNT:
+        d = demand[node]
+        if d > 0:
+            add_edge(DEMAND_SUPER_SOURCE, node, d)
+            total_demand += d
+        elif d < 0:
+            add_edge(node, DEMAND_SUPER_SINK, -d)
+        node += 1
+
+    feasible_flow = maxflow(DEMAND_SUPER_SOURCE, DEMAND_SUPER_SINK, total_demand)
+    if feasible_flow < total_demand:
+        return None
         
+    forward = graph[NETWORK_SINK][helper_edge_index_at_sink]
+    forward[CAPACITY] = 0
+    graph[NETWORK_SOURCE][forward[REV_INDEX]][CAPACITY] = 0
+
+
+    extra_needed = T - total_min
+    if extra_needed < 0:
+        return None 
+    if maxflow(NETWORK_SOURCE, NETWORK_SINK, extra_needed) != extra_needed:
+        return None
+        
+
+    allocation = [-1] * S
+    for student_id in range(S):
+        u = STUDENT_NODE_START + student_id
+        j = 0
+        while j < len(graph[u]):
+            e = graph[u][j]
+            v = e[DEST]
+            if BUS_NODE_START <= v < BUS_NODE_START + B:
+                if graph[v][e[REV_INDEX]][CAPACITY] > 0:
+                    allocation[student_id] = v - BUS_NODE_START
+                    break    
+            j += 1  
+               
+    assigned_count = 0
+    i = 0
+    while i < S:
+        if allocation[i] != -1:
+            assigned_count += 1
+        i += 1
+    if assigned_count != T:
+        return None
+    return allocation
+    
+
+
+               
+
+
+
+                     
+
+
+
+
+
 
     
              
