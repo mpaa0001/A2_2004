@@ -1,65 +1,127 @@
 
+"""
+This file contains the Analyser class for finding frequent music patterns.
+
+WARNING: This version has been modified to strictly AVOID dictionaries and sets
+as per the assignment's general rules. This means it implements a compliant
+solution, but it CANNOT meet the O(NM^2) time complexity for __init__.
+The time complexity of __init__ is now approximately O(N^2 * M^4) in the
+worst case, because finding and updating entries in a list-based map
+is O(P) and O(N) respectively (where P is num_patterns, up to O(NM^2)).
+
+This solution prioritizes the "no dict/set" rule over the time complexity.
+"""
+import time # Added for the test harness
+
 class Analyser:
-    
+    """
+    Analyser class to find the most frequent melodic patterns.
+    (No-dict/set version)
+
+    Attributes:
+        sequences (list[str]): The original list of song sequences.
+        max_frequency (list[int]): Stores the highest frequency found for each length K.
+        best_pattern_location (list):
+            Maps length K (as an index) to a tuple (s_idx, i) representing
+            the location of the most frequent pattern.
+    """
 
     def __init__(self, sequences):
+        """
+        Constructor for Analyser.
+
+        Time Complexity:
+            O(N^2 * M^4) in a bad case. The N*M^2 loops have an
+            inner loop to search 'pattern_frequ_map' (O(P_keys) ~ O(NM^2))
+            and another to check for song_id uniqueness (O(N)).
         
+        Space Complexity (during __init__):
+            O(N * M^2) for the temporary 'pattern_frequ_map' list.
+        
+        Space Complexity (Final Object):
+            O(N*M), bounded by storing:
+            1. self.sequences: O(N*M)
+            2. self.max_frequency: O(M)
+            3. self.best_pattern_location: O(M)
+            Total: O(NM + M) = O(NM)
+        """
         self.sequences = sequences
         
         N = len(sequences)
-        M_max = 0
-        if N > 0:
-            for s in sequences:
-                if len(s) > M_max:
-                    M_max = len(s)
-        
-        # O(M) space - for final object
-        self.max_freq = [0] * (M_max + 1)
-        # O(M) space - for final object
-        self.best_pattern_location = {} # K -> (song_index, start_index)
+        max_length = 0
+        # This loop is *only* to find max_length
+        for s in sequences:
+            max_length = max(max_length, len(s))
 
-        # O(NM^2) temporary space
-        pattern_counts = {} # (k, hash) -> set(song_indices)
+        # --- REPLACED dict WITH list ---
+        self.max_frequency = [0 for _ in range(max_length + 1)]
+        self.best_pattern_location = [None for _ in range(max_length + 1)] 
 
-        # A prime base for the rolling hash
-        BASE = 31 
+        # --- REPLACED dict WITH list ---
+        # This will store entries: [ (k, hash), [song_indices_list] ]
+        pattern_frequ_map = [] 
+
+        # A prime base for the rolling hash (using your choice of 37)
+        BASE = 37
         
         for s_idx, song in enumerate(self.sequences):
             n = len(song)
             for i in range(n): # O(M) - start of subsequence
                 current_hash = 0
                 for j in range(i + 1, n): # O(M) - end of subsequence
-                    # This is an O(1) operation
-                    # Calculate the difference from the *previous* note
                     diff = ord(song[j]) - ord(song[j - 1])
-                    
-                    # Update rolling hash for the *difference sequence*
-                    # H(d1, d2) = d1*B + d2
-                    # H(d1, d2, d3) = (d1*B + d2)*B + d3 = H(d1,d2)*B + d3
                     current_hash = (current_hash * BASE) + diff
-
-                    k = j - i + 1 # Length of the note pattern (k >= 2)
+                    k = j - i + 1
                     key = (k, current_hash)
 
-                    if key not in pattern_counts:
-                        pattern_counts[key] = set()
+                    # --- REPLACED dict lookup WITH list search (Slow) ---
+                    found_entry = None
+                    for entry in pattern_frequ_map:
+                        if entry[0] == key:
+                            found_entry = entry
+                            break
                     
-                    pattern_counts[key].add(s_idx)
+                    if found_entry is None:
+                        found_entry = [key, []]
+                        pattern_frequ_map.append(found_entry)
                     
-                    freq = len(pattern_counts[key])
+                    song_list = found_entry[1]
+
+                    # --- REPLACED set.add() WITH list search (Slow) ---
+                    is_present = False
+                    for song_id in song_list:
+                        if song_id == s_idx:
+                            is_present = True
+                            break
                     
-                    # Check if this is the new best for length K
-                    if freq > self.max_freq[k]:
-                        self.max_freq[k] = freq
-                        # Store the *location* of this pattern, not the
-                        # pattern itself, to save space.
+                    if not is_present:
+                        song_list.append(s_idx)
+                    # --- End of replacement ---
+                    
+                    freq = len(song_list)
+                    
+                    # --- FIXED LOGICAL BUG ---
+                    # This check is now outside the if/elif/else,
+                    # so it runs every time.
+                    if freq > self.max_frequency[k]:
+                        self.max_frequency[k] = freq
+                        # Store in the list using k as the index
                         self.best_pattern_location[k] = (s_idx, i)
 
     def getFrequentPattern(self, K):
+        """
+        Returns the most frequent pattern of a specific length K.
+
+        Time Complexity:
+            O(K). We perform a list lookup O(1) avg,
+            then slice a string of length K, O(K).
         
+        Aux Space Complexity:
+            O(K) for the returned list.
+        """
         
-        # O(1) average time lookup
-        if K not in self.best_pattern_location:
+        # O(1) time list lookup
+        if K >= len(self.best_pattern_location) or self.best_pattern_location[K] is None:
             return [] # No pattern of length K found
 
         # O(1) lookup
@@ -81,68 +143,57 @@ class Analyser:
 
 if __name__ == "__main__":
     
-    print("--- Analyser Test ---")
+    print("--- Analyser Test (No Dict/Set Version) ---")
     
     demo_songs = ["cegec", "gdfhd", "cdfhd"]
     
     print(f"Songs: {demo_songs}")
     try:
+        start_time = time.time()
         analyser = Analyser(demo_songs)
+        end_time = time.time()
+        print(f"__init__ took: {end_time - start_time:.6f} seconds")
 
         # Test K=2
         pattern_2 = analyser.getFrequentPattern(2)
         print(f"K=2 => {pattern_2}")
-        # Expected: ['d', 'f'] or ['f', 'h'] or ['c', 'e'] etc.
-        # "df" (2), "fh" (2), "ce" (1), "eg" (1), "ge" (1), "ec" (1)
-        # "gd" (-3), "df" (2), "fh" (2), "hd" (-4)
-        # "cd" (1), "df" (2), "fh" (2), "hd" (-4)
-        # Most frequent diffs: (2) with freq 3.
-        # Possible patterns: ['d', 'f'], ['f', 'h'], ['c', 'e'], ['e', 'g']
         if "".join(pattern_2) in ("df", "fh", "ce", "eg"):
              print("K=2 Test: PASS (Found a valid pattern)")
         else:
              print(f"K=2 Test: UNEXPECTED (Got {''.join(pattern_2)})")
 
-
         # Test K=3
         pattern_3 = analyser.getFrequentPattern(3)
         print(f"K=3 => {pattern_3}")
-        # Expected: ['d', 'f', 'h'] or ['c', 'e', 'g']
-        # "ceg" (2,2) - song 0
-        # "dfh" (2,2) - song 1, 2
-        # Freq of (2,2) is 3.
         if "".join(pattern_3) in ("dfh", "ceg"):
              print("K=3 Test: PASS (Found a valid pattern)")
         else:
-             print(f"K=3 Test: UNEXPECTED (Got {''.join(pattern_3)})")
+             print(f"K-3 Test: UNEXPECTED (Got {''.join(pattern_3)})")
 
         # Test K=4
         pattern_4 = analyser.getFrequentPattern(4)
         print(f"K=4 => {pattern_4}")
-        # Expected: ['d', 'f', 'h', 'd']
-        # "cege" (2, -2, 2) - song 0
-        # "dfhd" (2, 2, -4) - song 1, 2
-        # Freq of (2,2,-4) is 2.
         if "".join(pattern_4) == "dfhd":
-             print("K=4 Test: PASS (Found the only valid pattern)")
+             print("K-4 Test: PASS (Found the only valid pattern)")
         else:
-             print(f"K=4 Test: UNEXPECTED (Got {''.join(pattern_4)})")
+             print(f"K-4 Test: UNEXPECTED (Got {''.join(pattern_4)})")
              
         # Test K=5
         pattern_5 = analyser.getFrequentPattern(5)
         print(f"K=5 => {pattern_5}")
         if "".join(pattern_5) in ("cegec", "gdfhd", "cdfhd"):
-             print("K=5 Test: PASS")
+             print("K-5 Test: PASS")
         else:
-             print(f"K=5 Test: UNEXPECTED (Got {''.join(pattern_5)})")
+             print(f"K-5 Test: UNEXPECTED (Got {''.join(pattern_5)})")
              
         # Test K=6 (Out of bounds)
         pattern_6 = analyser.getFrequentPattern(6)
-        print(f"K=6 => {pattern_6}")
+        print(f"K-6 => {pattern_6}")
         if pattern_6 == []:
-             print("K=6 Test: PASS (Correctly returned empty list)")
+             print("K-6 Test: PASS (Correctly returned empty list)")
         else:
-             print(f"K=6 Test: FAIL (Got {pattern_6})")
+             print(f"K-6 Test: FAIL (Got {pattern_6})")
 
     except Exception as e:
         print(f"\n--- !! An error occurred: {e} !! ---")
+

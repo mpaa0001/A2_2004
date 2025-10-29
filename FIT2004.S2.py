@@ -248,3 +248,20 @@ def assign(L, roads, students, buses, D, T):
 
 
 ##QUESTION 2##
+
+class Analyser:
+    def __init__(self, sequences):
+        
+        self.sequences = sequences
+        
+        N= len(sequences)
+        max_length = 0
+        for s in sequences:
+            max_length = max(max_length, len(s))
+
+        self.max_frequency = [0 for _ in range(max_length + 1)]
+        self.best_pattern_location = [None for _ in range(max_length + 1)] 
+
+        pattern_frequ_map = []
+
+        BASE = 37
