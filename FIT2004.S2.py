@@ -15,7 +15,7 @@ def assign(L, roads, students, buses, D, T):
     reachable_students = [[] for _ in range(B)] #list of reachable students for each bus
 
     for bus_index in range(B):
-        pickup_point, min_cap, max_cap = buses[bus_index]
+        pickup_point, _, _ = buses[bus_index]
         distances = [infinity] * L
         distances[pickup_point] = 0
         priority_queue = [(0, pickup_point)]
@@ -43,13 +43,44 @@ def assign(L, roads, students, buses, D, T):
         total_max += bus[2]
 
     if not (total_min <= T <= total_max):
-        return None 
-
+        return None #imposttibel total students
     
 
+    allocation = [-1] * S
+    solution_found = [False]
+
+    def backtrack(bus_id, assigned_so_far):
+        if bus_id == B:
+            solution_found[0] = (assigned_so_far == T)
+            return
+        
+        pickup_point, min_cap, max_cap = buses[bus_id]
+        candidates = []
+        for student_id in reachable_students[bus_id]:
+            if allocation[student_id] == -1:
+                candidates.append(student_id)
+
+        if assigned_so_far > T:
+            return
+        if assigned_so_far + len(candidates) < T:
+            return
+        
+        for group_size in range(min_cap, max_cap + 1):
+            if group_size > len(candidates):
+                break
+            selected = candidates[:group_size]
+
+            for student_id in selected:
+                allocation[student_id] = bus_id
+
+            backtrack(bus_id + 1, assigned_so_far + group_size)
+
+            if solution_found[0]:
+                return
+            
+            for student_id in selected:
+                allocation[student_id] = -1
 
 
-
-
-
-
+    backtrack(0, 0)
+    return allocation if solution_found[0] else None
