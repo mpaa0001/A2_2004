@@ -40,7 +40,46 @@ def assign(L, roads, students, buses, D, T):
     if T < total_min or T > total_max:
         return None
     
-    infinity = max(total_max + 1, D _ 1)
+    infinity = max(total_max + 1, D + 1)
+
+    def dijkstra_from(start_loc):
+        distance = [infinity] * L
+        distance[start_loc] = 0
+        heap = [(0, start_loc)]
+
+        while heap:
+            curr_dist, u = heapq.heappop(heap)
+            if curr_dist != distance[u]:
+                continue
+            if curr_dist > D:
+                break
+            for v, w in adjacent_list[u]:
+                new_distance = curr_dist + w
+                if new_distance <= D and new_distance < distance[v]:
+                    distance[v] = new_distance
+                    heapq.heappush(heap, (new_distance, v))
+        return distance
+    
+    #reachability
+    reachable_by_bus = [[] for _ in range(B)]
+    buses_by_student = [[] for _ in range(S)]
+
+    index = 0
+    while index < len(unique_pickup_points):
+        pickup_location = unique_pickup_points[index]
+        distance = dijkstra_from(pickup_location)
+        bus_list = buses_at_pickup_point[index]
+        
+        for student_id, pickup_location in enumerate(students):
+            if distance[pickup_location] <= D:
+                for bus_id in bus_list:
+                    reachable_by_bus[bus_id].append(student_id)
+                    buses_by_student[student_id].append(bus_id)
+
+
+
+
+
        
 
 
