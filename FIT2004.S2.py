@@ -265,3 +265,47 @@ class Analyser:
         pattern_frequ_map = []
 
         BASE = 37
+
+        for song_id, song in enumerate(self.sequences):
+            song_len = len(song)
+
+            for start_index in range(song_len): # O(M) - start of subsequence
+                rolling_hash = 0
+
+                for end_index in range(start_index + 1, song_len): # O(M) - end of subsequence
+                    interval = ord(song[end_index]) - ord(song[end_index - 1])
+                    rolling_hash = (rolling_hash * BASE) + interval
+
+                    pattern_length = end_index - start_index + 1
+                    pattern_key = (pattern_length, rolling_hash)
+
+
+                    entry_found = None
+                    for entry in pattern_frequ_map:
+                        if entry[0] == pattern_key:
+                            entry_found = entry
+                            break
+
+                    if entry_found is None:
+                        song_indices = [song_id]
+                        pattern_frequ_map.append([pattern_key, song_indices])
+                        frequency = 1
+                    else:
+                        song_indices = entry_found[1]
+                        added_already = False
+
+                        for previous_id in song_indices:
+                            if previous_id == song_id:
+                                added_already = True
+                                break
+                        if not added_already:
+                            song_indices.append(song_id)
+
+
+                        frequency = len(song_indices)
+
+                    if frequency > self.max_frequency[pattern_length]:
+                        self.max_frequency[pattern_length] = frequency
+                        self.best_pattern_location[pattern_length] = (song_id, start_index)
+                    
+                    
