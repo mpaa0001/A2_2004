@@ -10,7 +10,6 @@ def assign(L, roads, students, buses, D, T):
     B = len(buses)
     S = len(students)
 
-    # --- This is a good, efficient O(B) method ---
     unique_pickup_points = []
     buses_at_pickup_point = []
     pickup_to_index = [-1] * L
@@ -246,3 +245,6 @@ def assign(L, roads, students, buses, D, T):
     return allocation
 
 
+
+
+##QUESTION 2##
