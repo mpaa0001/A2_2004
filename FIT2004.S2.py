@@ -523,6 +523,43 @@ Fields:
         it is -1.
 """
     def __init__(self, sequences):
+        """
+        Precomputes, for every pattern length K, 
+        which K-note motif appears in the largest number of distinct songs 
+        (treating transposed versions as the same motif).
+        Done by constructing a trie whose paths correspond to sequences of pitch 
+        differences between consecutive notes. For each song, the code generates all O(N · M²) 
+        candidate substrings, where N is the number of songs and M is the max song length,
+        converts each substring into its sequence of steps, inserts that step sequence into the trie,
+        and records how many different songs contain that pattern.
+
+        Args:
+        sequences (list[str]): List of note sequences, one per song. 
+        Each song is given as a string of lowercase letters (for example: ["cegec", "gdfhd"]).
+
+        Returns:
+        None. This is constructor. does not produce a return value.
+        Innitialises the  state of the object such as;
+        self.sequences, self.best_frequency, self.best_song, and self.best_start, so
+        that getFrequentPattern(K) can be called later.
+
+
+        Worst-Case Time Complexity: O(N · M²)
+        - There are N songs.
+        -A single song of length M has O(M²) distinct substrings (all start and end  in index pairs).
+        -For each substring, we extend the trie in O(1)  time by creating the next child node.
+        -So total work is: N songs × M² substrings per song × O(1) update per substring
+        Overall: O(N · M²)
+
+        Worst-Case Space Usage: O(N · M)
+        -After __init__ finishes, do not keep the trie. It can be remvoed
+        - The Analyser object keeps: the original sequences; O(N · M) total characters,
+        three arrays of length up to M which consists of best_frequency, best_song, best_start, which is O(M).
+        Dominant term is O(N · M).
+        """
+
+
+        
         self.sequences = sequences[:]
         N = len(sequences)
 
