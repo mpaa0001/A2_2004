@@ -498,15 +498,11 @@ Time Complexity Analysis:
 
 ##QUESTION 2##
 class Analyser:
-    """
-    """
     def __init__(self, sequences):
-       
-        
-        self.sequences = sequences[:] #O(1) time; store reference to sequences
-        N= len(sequences) #O(N) time; finds the numver of seuqences
-        
-        M= 0 
+        self.sequences = sequences[:]
+        N = len(sequences)
+
+        M = 0
         for song in sequences:
             song_len = len(song)
             if song_len > M:
@@ -515,15 +511,71 @@ class Analyser:
         self.max_length = M
 
         self.best_frequency = [0] * (M + 1)
-        self.best_song = [-1] * (M + 1)
-        self.best_start = [-1] * (M + 1)
+        self.best_song      = [-1] * (M + 1)
+        self.best_start     = [-1] * (M + 1)
 
         if N == 0:
             return
         if M < 2:
-            return 
+            return
+
+        children = [[-1] * 51]
+        pattern_song_count = [0]
+        last_seen_in_song = [-1]
+
+        def get_child(node_id, step_index):
+            existing = children[node_id][step_index]
+            if existing != -1:
+                return existing
+
+            new_id = len(children)
+            children[node_id][step_index] = new_id
+
+            children.append([-1] * 51)
+            pattern_song_count.append(0)
+            last_seen_in_song.append(-1)
+
+            return new_id
+
+        for song_id, song_string in enumerate(sequences):
+            song_len = len(song_string)
+            if song_len >= 2:
+                steps = [0] * (song_len - 1)
+                for step_pos in range(song_len - 1):
+                    steps[step_pos] = (
+                        ord(song_string[step_pos + 1]) - ord(song_string[step_pos])
+                    )
+
+                for start_pos in range(song_len - 1):
+                    node = 0
+                    for end_pos in range(start_pos, song_len - 1):
+                        step_index = steps[end_pos] + 25
+                        node = get_child(node, step_index)
+
+                        segment_len = end_pos - start_pos + 1
+                        K = segment_len + 1
+
+                        if last_seen_in_song[node] != song_id:
+                            last_seen_in_song[node] = song_id
+                            pattern_song_count[node] += 1
+
+                            if pattern_song_count[node] > self.best_frequency[K]:
+                                self.best_frequency[K] = pattern_song_count[node]
+                                self.best_song[K] = song_id
+                                self.best_start[K] = start_pos
+
+
+
+
+    
         
-        
+
+
+
+
+
+
+
         max_length = 0 # O(1) time; intilaises max_length
         for s in sequences: #O(N) time loop; finds longest sequence length M
             max_length = max(max_length, len(s)) # O(1) time; finds length and max 
