@@ -1,18 +1,125 @@
 import heapq
 
 def assign(L, roads, students, buses, D, T):
+    """
+    Function Purpose:
+Determines a valid allocation of students to buses under the following constraints:
+-Each student can only walk up to distance D to reach a bus.
+-Each bus has a minimum and maximum capacity.
+-Exactly T students must be assigned in total.
+
+Algorithm Overview:
+1. Construct the City Graph- Represent the city as an adjacency list, where locations are nodes and roads are weighted edges.
+
+2.Identify Unique Pickup Points:
+-Extract all unique pickup locations from the list of buses (P, where P<=18)
+-Group buses together by their pickup location for efficient distance queries
+
+3.Using Dijkstra's Algorithm Reacability is calculated:
+- For each unique pickup point, run Dijkstra's algorithm to determine which students can reach that point within distance D.
+    Build two maps:
+    -For each bus (B), the students (S) who can reach it wihtin distance D
+    -For each student (S), the buses (B) they can reach woithin distance D
+
+4.Build a max-flow network with lower and upper bounds to solve problem:
+            -   Nodes: Source, Sink, Students (S), Buses (B), SuperSource, SuperSink
+            -   This is a “circulation with demands” problem, which ensures that every bus's minimum required capacity (f_j) is satisfied, 
+                where f_j represents the minimum number of students that bus j must carry.
+
+5. Feasibility Flow (Circulation with Demands):
+-Ensure that all bus minimum capacities can be satisfied
+- run max-flow from Super source to Super sink.
+- If the flow is less than total demand, a valid allocation is impossible.
+- if flow == total demand,minimum possible, proceed to Augmentation Flow.
+
+6.Augmentayion Flow (Exact Assignment Count):
+- Disable the helper edge (sink → source) used during circulation check.
+- Attempt to push exactly T - total_min additional flow from the original source to sink.
+- Return None, if fails
+
+7. Extract Assignments:
+-Traverse the residual graph to determine which student was assigned to which bus
+-Return a list where allocation[i] is the bus ID assigned to student i, or -1 if unassigned.
     
-    adjacent_list = [[] for _ in range(L)]
-    for u, v, w in roads:
-        adjacent_list[u].append((v, w))
-        adjacent_list[v].append((u, w))
+Input:
+    - L: number of locations (int)
+    - roads: list of (u, v, w) tuples (list)
+    - students: list of student locations (list[int])
+    - buses: list of (pickup_location, min_cap, max_cap) tuples (list)
+    - D: max travel distance (int)
+    - T: exact total students (int)
 
-    B = len(buses)
-    S = len(students)
+Output:
+    - allocation: list of length S, with allocation[i] = bus_id or -1 (list)
+    - None: if no valid allocation exists (NoneType)
 
-    unique_pickup_points = []
-    buses_at_pickup_point = []
-    pickup_to_index = [-1] * L
+Time Complexity Analysis:
+    - O(R): Building the `adjacent_list`, where R is the number of roads.
+    - O(L + B): Finding unique pickups, by initialising a list of size L (O(L))
+        and iterating through B buses (O(B)).
+    - O(P * (R + L log L)): Running Dijkstra's from P unique pickup points.
+        Each Dijkstra's is O(R + L log L). Since P <= 18 (a constant),
+        this simplifies to O(R + L log L).
+    - O(S*B): Building reachability lists. Since B is a constant (B=O(1)),
+        this simplifies to O(S).
+    - Max-Flow (Edmonds-Karp): O(F * E) where F is total flow, E is edges.
+        - E (Edges) = O(S*B + S + B). Since B=O(1), E = O(S).
+        - F (Flow) = Feasibility Flow + Augmentation Flow.
+        - Feasibility Flow  = total_min. In the worst case, total_min can be O(T).
+        - Augmentation Flow = extra_needed = T - total_min. This is also O(T).
+        - Total Flow F = O(T).
+        - Max-Flow Time = O(T * S) = O(S*T).
+    - O(S*B): Allocation recovery. Since B=O(1), this simplifies to O(S).
+    - Total Time: The sum of these parts is O(R) + O(L+B) + O(R + L log L) + O(S) + O(S*T) + O(S).
+    - Since L+R log L dominates L and R, and B=O(1), and S*T is separate,
+        the final worst-case time is O(S*T + L + R log L).
+
+
+    Aux Space Complexity Analysis:
+    The worst-case auxiliary space is O(S + L + R), based on the following:
+    - City Graph: `adjacent_list` requires O(L) space for the list of lists and O(R)
+        space to store all the road tuples, for a total of O(L + R).
+    - Dijkstra's & Helpers:
+        - `pickup_to_index`: Requires a list of size L, which is O(L).
+        - `dijkstra_from` internals: The `distance` list is O(L) and the `heap`
+          is O(L) in the worst case.
+        - `unique_pickup_points` and `buses_at_pickup_point`: These are O(P) and O(B)
+          respectively. Since P <= 18 and B is assumed to be O(1), these are O(1).
+    - Reachability Lists:
+        - `buses_by_student`: In the worst case, every student can reach every bus,
+          requiring O(S * B) space. Based on the B=O(1) assumption, this is O(S).
+        - `reachable_by_bus`: This is O(S * B), which simplifies to O(S).
+    - Flow Network ( largest component):
+        - `graph` (adjacency list): Stores O(V) nodes and O(E) edges.
+          - V = O(S + B) = O(S) (since B=O(1)).
+          - E = O(S + S*B + B) = O(S) (since B=O(1)).
+          - Total space for `graph` is O(V + E) = O(S).
+        - `bfs_find_path` internals: `visited`, `parent_node`, `parent_edge`, and `queue`
+          are all lists of size `NODE_COUNT` (which is O(V)), so they are O(S).
+        - `demand` list: This is size `NODE_COUNT`, so it is O(S).
+    - Final Output:
+        - `allocation`: This is a list of size S, which is O(S).
+    - Total: The total space is the sum of these parts: O(L+R) + O(L) + O(S) + O(S) + O(S).
+    - The dominant terms are O(L + R + S).
+    """
+
+    # 1. Build city graph # 
+
+    adjacent_list = [[] for _ in range(L)] # O(L) time/space - intilaises adjacency list for L locations
+    for u, v, w in roads:  # O(R) time loop - iterate through R roads
+        adjacent_list[u].append((v, w)) #O(1) time- appends u's adjacent list
+        adjacent_list[v].append((u, w)) #O(1) time- appends v's adjacent list
+
+    B = len(buses)   # O(1) time - number of buses list
+    S = len(students) #O(1) time - number of students list
+
+
+
+    # 2. finds unique pickup points (P<=18) #
+    unique_pickup_points = []  #O(P) = O(1) aux space as it stores unique location IDS
+    buses_at_pickup_point = [] # O(P) = O(1) aux spacw as it stores list of bus IDS at each of the unique point
+    pickup_to_index = [-1] * L # O(L) time and space; a has map using a list is used to find pickup index in O(1)
+
 
     for bus_id in range(B):
         pickup_point = buses[bus_id][0]
@@ -325,64 +432,3 @@ class Analyser:
         return list(pattern_string)
     
     
-
-# =============================================================================
-# --- TEST HARNESS ---
-# You can run this file to test the Analyser class.
-# =============================================================================
-
-if __name__ == "__main__":
-    
-    print("--- Analyser Test (No Dict/Set Version) ---")
-    
-    demo_songs = ["cegec", "gdfhd", "cdfhd"]
-    
-    print(f"Songs: {demo_songs}")
-    try:
-        start_time = time.time()
-        analyser = Analyser(demo_songs)
-        end_time = time.time()
-        print(f"__init__ took: {end_time - start_time:.6f} seconds")
-
-        # Test K=2
-        pattern_2 = analyser.getFrequentPattern(2)
-        print(f"K=2 => {pattern_2}")
-        if "".join(pattern_2) in ("df", "fh", "ce", "eg"):
-             print("K=2 Test: PASS (Found a valid pattern)")
-        else:
-             print(f"K=2 Test: UNEXPECTED (Got {''.join(pattern_2)})")
-
-        # Test K=3
-        pattern_3 = analyser.getFrequentPattern(3)
-        print(f"K=3 => {pattern_3}")
-        if "".join(pattern_3) in ("dfh", "ceg"):
-             print("K-3 Test: PASS (Found a valid pattern)")
-        else:
-             print(f"K-3 Test: UNEXPECTED (Got {''.join(pattern_3)})")
-
-        # Test K=4
-        pattern_4 = analyser.getFrequentPattern(4)
-        print(f"K=4 => {pattern_4}")
-        if "".join(pattern_4) == "dfhd":
-             print("K-4 Test: PASS (Found the only valid pattern)")
-        else:
-             print(f"K-4 Test: UNEXPECTED (Got {''.join(pattern_4)})")
-             
-        # Test K=5
-        pattern_5 = analyser.getFrequentPattern(5)
-        print(f"K=5 => {pattern_5}")
-        if "".join(pattern_5) in ("cegec", "gdfhd", "cdfhd"):
-             print("K-5 Test: PASS")
-        else:
-             print(f"K-5 Test: UNEXPECTED (Got {''.join(pattern_5)})")
-             
-        # Test K=6 (Out of bounds)
-        pattern_6 = analyser.getFrequentPattern(6)
-        print(f"K-6 => {pattern_6}")
-        if pattern_6 == []:
-             print("K-6 Test: PASS (Correctly returned empty list)")
-        else:
-             print(f"K-6 Test: FAIL (Got {pattern_6})")
-
-    except Exception as e:
-        print(f"\n--- !! An error occurred: {e} !! ---")
