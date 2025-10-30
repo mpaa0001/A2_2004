@@ -121,34 +121,38 @@ Time Complexity Analysis:
     pickup_to_index = [-1] * L # O(L) time and space; a has map using a list is used to find pickup index in O(1)
 
 
-    for bus_id in range(B):
-        pickup_point = buses[bus_id][0]
-        j = pickup_to_index[pickup_point]
-        if j == -1:
-            pickup_to_index[pickup_point] = len(unique_pickup_points)
-            unique_pickup_points.append(pickup_point)
-            buses_at_pickup_point.append([bus_id])
+    for bus_id in range(B):     # O(B) time loop; iterates through all buses. With the assumtpion (B=O(1)), therefore takes O(1) time
+        pickup_point = buses[bus_id][0]  #O(1) time; gets the pickup location ID for the current bus
+        j = pickup_to_index[pickup_point] #O(1) time; checks if the pickup oint has been seen before
+        if j == -1:   #O(1) time as it is a check cnodition
+            pickup_to_index[pickup_point] = len(unique_pickup_points)  # O(1) time; is stores index for this new pickup point
+            unique_pickup_points.append(pickup_point) # O(1) time; adds new unniuqe location ID
+            buses_at_pickup_point.append([bus_id])  #O(1) time; add new list for this location
         else:
-            buses_at_pickup_point[j].append(bus_id)
+            buses_at_pickup_point[j].append(bus_id)  #O(1) time; add this bus ID to exisitng locations list
 
+    #checking total capacities
+    min_caps = [0] * B # O(B) = O(1) aux space; stores min capacities for B buses
+    max_caps = [0] * B #O(B) = O(1) aux space; sotres max capacities for B buses
+    total_min = 0 #O(1) aux space; intalslies the total minimum
+    total_max = 0 #O(1) aux spacw; intialsies total maximum
+    for bus_index in range(B): # O(B) = O(1) time loop; iterates through the buses
+        _, min_cap_bus_index, max_cap_bus_index = buses[bus_index] # O(1) time; bus tuple unpacked
+        min_caps[bus_index] = min_cap_bus_index #O(1) time; sotres minimum capacity
+        max_caps[bus_index] = max_cap_bus_index #O(1) time; sotres maximum capacity
+        total_min += min_cap_bus_index #O(1) time; add to total
+        total_max += max_cap_bus_index # O(1) time; add to total
 
-    min_caps = [0] * B
-    max_caps = [0] * B
-    total_min = 0
-    total_max = 0
-    for bus_index in range(B):
-        _, min_cap_bus_index, max_cap_bus_index = buses[bus_index]
-        min_caps[bus_index] = min_cap_bus_index
-        max_caps[bus_index] = max_cap_bus_index
-        total_min += min_cap_bus_index
-        total_max += max_cap_bus_index
-
+    # O(1) time; chekcs if target T is possible
     if T < total_min or T > total_max:
-        return None
+        return None #O(1) timee; impossiple, will return none
     
 
-    infinity = max(total_max + 1, D + 1) 
+    infinity = max(total_max + 1, D + 1)  #O(1) time; a safe infinity larger than any possible path or capacity
 
+
+
+    
     def dijkstra_from(start_loc):
         distance = [infinity] * L
         distance[start_loc] = 0
