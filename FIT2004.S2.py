@@ -498,6 +498,30 @@ Time Complexity Analysis:
 
 ##QUESTION 2##
 class Analyser:
+    """
+Analyses musical note sequences to detect recurring melodic patterns.
+This class builds a trie (prefix tree) over step-differences between notes and
+uses it to identify, for every possible pattern length K, which K-note motif
+appears in the largest number of different songs.
+Two motifs are considered the same if their sequence of pitch steps is the same, even if they start on
+different notes. 
+
+Fields:
+    sequences (list):
+        A stored copy of all input songs (each song is a string of notes).
+    max_length (int):
+        The length of the longest song in the input. Used to validate K.
+    best_frequency (list of int):
+        For each K, best_frequency[K] is the maximum number of DISTINCT songs
+        that contain some K-note pattern (up to transposition).
+    best_song (list of int):
+        For each K, best_song[K] is the index of a song where that "best"
+        K-note pattern occurs. If no pattern of length K was found, it is -1.
+    best_start (list of int):
+        For each K, best_start[K] is the starting index in best_song[K]
+        where that K-note pattern begins. If no pattern of length K was found,
+        it is -1.
+"""
     def __init__(self, sequences):
         self.sequences = sequences[:]
         N = len(sequences)

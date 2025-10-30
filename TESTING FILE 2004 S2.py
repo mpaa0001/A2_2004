@@ -1,206 +1,97 @@
 class Analyser:
     def __init__(self, sequences):
-        """
-        Preprocesses all note sequences.
-
-        Complexity goals:
-        - Time: O(N * M^2)
-        - Peak space during preprocessing: O(N * M^2)
-        - Final stored space after init: O(N * M)
-
-        Where:
-        - N = number of songs
-        - M = max song length
-        """
-
-        # Store original sequences so we can reconstruct patterns later.
-        # This is O(N*M) space.
-        self.sequences = sequences[:]  # shallow copy
+        self.sequences = sequences[:]
         N = len(sequences)
 
-        # Handle edge case: no songs
+        M = 0
+        for song in sequences:
+            song_len = len(song)
+            if song_len > M:
+                M = song_len
+
+        self.max_length = M
+
+        self.best_frequency = [0] * (M + 1)
+        self.best_song      = [-1] * (M + 1)
+        self.best_start     = [-1] * (M + 1)
+
         if N == 0:
-            self.max_len = 0
-            self.best_freq = []
-            self.best_song = []
-            self.best_start = []
+            return
+        if M < 2:
             return
 
-        # Find M = max length of any sequence
-        M = 0
-        i = 0
-        while i < N:
-            length_i = len(sequences[i])
-            if length_i > M:
-                M = length_i
-            i += 1
-        self.max_len = M
+        children = [[-1] * 51]
+        pattern_song_count = [0]
+        last_seen_in_song = [-1]
 
-        # We will compute, for each K (pattern length in NOTES, K >= 2):
-        # - best_freq[K]: highest number of DISTINCT songs that contain
-        #                 some transposition-equivalent pattern of length K
-        # - best_song[K]: which song first achieved that best
-        # - best_start[K]: where in that song it starts
-        #
-        # These are size M+1 so we can index directly by K.
-        self.best_freq = [0] * (M + 1)
-        self.best_song = [-1] * (M + 1)
-        self.best_start = [-1] * (M + 1)
+        def get_child(node_id, step_index):
+            existing = children[node_id][step_index]
+            if existing != -1:
+                return existing
 
-        # -------------------------------
-        # BUILD TRIE OF INTERVAL PATTERNS
-        # -------------------------------
-        #
-        # Each node in the trie corresponds to a sequence of intervals
-        # (like [+2, +2, -1, ...]).
-        #
-        # Node storage (parallel lists, index = node_id):
-        #   children[node_id] = list of length 51
-        #       children[node_id][d] = next node index, or -1 if none.
-        #       Here d is interval_code in [0..50] representing delta [-25..25].
-        #
-        #   freq[node_id] = in how many DISTINCT songs this pattern appears
-        #
-        #   last_song_seen[node_id] = last song_id that updated freq for this node
-        #       (to avoid counting the same song multiple times)
-        #
-        # Root is node 0 and represents "empty interval sequence".
+            new_id = len(children)
+            children[node_id][step_index] = new_id
 
-        children = [[-1] * 51]   # node 0
-        freq = [0]
-        last_song_seen = [-1]
+            children.append([-1] * 51)
+            pattern_song_count.append(0)
+            last_seen_in_song.append(-1)
 
-        def get_child(node_id, interval_code):
-            """
-            Follow child with this interval_code. Create it if needed.
+            return new_id
 
-            interval_code is (delta + 25), so it is in [0..50].
+        for song_id, song_string in enumerate(sequences):
+            song_len = len(song_string)
+            if song_len >= 2:
+                steps = [0] * (song_len - 1)
+                for step_pos in range(song_len - 1):
+                    steps[step_pos] = (
+                        ord(song_string[step_pos + 1]) - ord(song_string[step_pos])
+                    )
 
-            Returns: child_node_id (int)
-            """
-            next_id = children[node_id][interval_code]
-            if next_id == -1:
-                # Create new node
-                next_id = len(children)
-                children[node_id][interval_code] = next_id
-                children.append([-1] * 51)
-                freq.append(0)
-                last_song_seen.append(-1)
-            return next_id
+                for start_pos in range(song_len - 1):
+                    node = 0
+                    for end_pos in range(start_pos, song_len - 1):
+                        step_index = steps[end_pos] + 25
+                        node = get_child(node, step_index)
 
-        # ---------------------------------
-        # MAIN PREPROCESSING LOOP
-        # ---------------------------------
-        #
-        # For each song:
-        #   1. Compute its interval array: diffs[j] = seq[j+1]-seq[j]
-        #   2. For every start index in diffs:
-        #        Walk forward, extending substring one interval at a time.
-        #        Update trie nodes along this walk.
-        #
-        # If we're at substring diffs[start : end+1] (length L = end-start+1),
-        # that corresponds to a NOTE pattern of length K = L+1.
-        #
-        # Every time we extend, we:
-        #   - Mark that this trie node appears in this song (distinct count)
-        #   - If its distinct-count freq becomes the best for this K,
-        #     record (song_id, start_index) for reconstruction.
+                        segment_len = end_pos - start_pos + 1
+                        K = segment_len + 1
 
-        song_id = 0
-        while song_id < N:
-            song = sequences[song_id]
-            m = len(song)
+                        if last_seen_in_song[node] != song_id:
+                            last_seen_in_song[node] = song_id
+                            pattern_song_count[node] += 1
 
-            # If the song is shorter than 2 notes, it can't form a K>=2 pattern.
-            if m >= 2:
-                # Build interval array for this song:
-                # diffs[j] = ord(song[j+1]) - ord(song[j]), range [-25..25]
-                diffs = [0] * (m - 1)
-                j = 0
-                while j < m - 1:
-                    diffs[j] = (ord(song[j + 1]) - ord(song[j]))
-                    j += 1
-
-                # Enumerate all substrings of diffs.
-                # For each start in [0 .. m-2], we walk down the trie
-                # as we extend end from start .. m-2.
-                start = 0
-                while start < (m - 1):
-                    node = 0  # start at root of trie for each new start
-                    end = start
-                    while end < (m - 1):
-                        # Convert interval -25..25 to code 0..50
-                        interval_code = diffs[end] + 25
-                        # step/create child
-                        node = get_child(node, interval_code)
-
-                        # Length of this interval-substring
-                        L = end - start + 1
-                        # Corresponding NOTE pattern length is K = L + 1
-                        K = L + 1
-
-                        # Count distinct songs for this node
-                        if last_song_seen[node] != song_id:
-                            last_song_seen[node] = song_id
-                            freq[node] += 1
-
-                            # If this subsequence is now the best for length K,
-                            # remember its location.
-                            if freq[node] > self.best_freq[K]:
-                                self.best_freq[K] = freq[node]
+                            if pattern_song_count[node] > self.best_frequency[K]:
+                                self.best_frequency[K] = pattern_song_count[node]
                                 self.best_song[K] = song_id
-                                # IMPORTANT:
-                                # start is an index in diffs. The pattern's first
-                                # note index in the original song is also `start`.
-                                self.best_start[K] = start
-
-                        end += 1
-                    start += 1
-
-            song_id += 1
-
-        # Done preprocessing.
-        # We intentionally DO NOT store the trie (children/freq/etc.) on self.
-        # That big structure was only needed to compute the best patterns.
-        # After __init__ finishes, it gets garbage collected.
-        #
-        # Final object space:
-        #   - self.sequences: O(N*M)
-        #   - self.best_* arrays: O(M)
-        # Total: O(N*M).
+                                self.best_start[K] = start_pos
 
 
     def getFrequentPattern(self, K):
-        """
-        Return the most frequent transposition-equivalent pattern of length K
-        as a list of characters. If multiple are tied, we return one of them.
-
-        Worst-case time: O(K).
-        """
-
-        # Guard 1: K must be at least 2 (problem spec) and at most max_len.
-        if K < 2 or K > self.max_len:
-            return []
-
-        # Guard 2: make sure our arrays are long enough (defensive in case of indentation issues).
         if K >= len(self.best_song) or K >= len(self.best_start):
             return []
 
+        if K < 2 or K > self.max_length:
+            return []
+        
         song_id = self.best_song[K]
-        start_idx = self.best_start[K]
-
-        # If we never recorded any pattern of this length K, return [].
-        if song_id == -1 or start_idx == -1:
+        if song_id == -1:
             return []
 
-        song_str = self.sequences[song_id]
+        start_index = self.best_start[K]
+        if start_index == -1:
+            return []
+        
+        song_string = self.sequences[song_id]
+        pattern_string = song_string[start_index : start_index + K]
 
-        # Slice out the actual notes from that song.
-        # This slice is length K, so O(K).
-        pattern_str = song_str[start_idx : start_idx + K]
+        pattern_list = [None] * len(pattern_string)
+        i = 0
+        while i < len(pattern_string):
+            pattern_list[i] = pattern_string[i]
+            i += 1
 
-        # Convert to list of characters, still O(K).
-        return [ch for ch in pattern_str]
+        return pattern_list
+    print("HI")
 
 
     # ==============================================================================
