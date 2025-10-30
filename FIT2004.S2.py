@@ -544,38 +544,42 @@ Auxiliary Space Complexity: O(NM + M)
 
         """
         
-        self.sequences = sequences
+        self.sequences = sequences #O(1) time; store reference to sequences
         
-        N= len(sequences)
-        max_length = 0
-        for s in sequences:
-            max_length = max(max_length, len(s))
+        N= len(sequences) #O(N) time; finds the numver of seuqences
+        max_length = 0 # O(1) time; intilaises max_length
+        for s in sequences: #O(N) time loop; finds longest sequence length M
+            max_length = max(max_length, len(s)) # O(1) time; finds length and max 
 
-        self.max_frequency = [0 for _ in range(max_length + 1)]
-        self.best_pattern_location = [None for _ in range(max_length + 1)] 
 
-        pattern_frequ_map = []
+        self.max_frequency = [0 for _ in range(max_length + 1)] #O(M) time and space: list to store hgihest frequency found for each length
+        self.best_pattern_location = [None for _ in range(max_length + 1)]  #O(M) time and space ' list to store the song_id and start_index of the best pattern
 
-        BASE = 37
+        pattern_frequ_map = [] #O(1) time; intilaises a list to be used as a hash map
+                              
+        BASE = 37 # O(1) time; prime base for the rolling hash
 
-        for song_id, song in enumerate(self.sequences):
-            song_len = len(song)
+        for song_id, song in enumerate(self.sequences): #O(N) time loop: iterates each song
+            song_len = len(song) #O(1) time: length of current song
 
-            for start_index in range(song_len): # O(M) - start of subsequence
-                rolling_hash = 0
+            for start_index in range(song_len): # O(M) start of subsequence, iterates through each possible start character
+                rolling_hash = 0 #O(1) time: reset hash for each of the new position
 
+                #O(M) time: iterate through each possible end character
                 for end_index in range(start_index + 1, song_len): # O(M) - end of subsequence
-                    interval = ord(song[end_index]) - ord(song[end_index - 1])
-                    rolling_hash = (rolling_hash * BASE) + interval
+                    interval = ord(song[end_index]) - ord(song[end_index - 1]) #O(1) time; interval between notes, Rolling Hash Calculation
+                    rolling_hash = (rolling_hash * BASE) + interval #O(1) time; update rolling hash
 
-                    pattern_length = end_index - start_index + 1
-                    pattern_key = (pattern_length, rolling_hash)
+                    pattern_length = end_index - start_index + 1 #O(1) time; calcualte pattern legnth
+                    pattern_key = (pattern_length, rolling_hash) #O(1) timel key for the pattern (lenght, hash) is created
 
-
-                    entry_found = None
-                    for entry in pattern_frequ_map:
-                        if entry[0] == pattern_key:
-                            entry_found = entry
+                    #map look up  (list based)
+                    
+                    entry_found = None #O(1) time; initalises found flag 
+                    for entry in pattern_frequ_map: #O(P) time: linear search for the pattern key, P is number of unique patterns found so far
+                                                    #P can be up to O(N * M^2)
+                        if entry[0] == pattern_key: #O(1)  time: store refercne to the found entry
+                            entry_found = entry     #O(1) time: stop linear search
                             break
 
                     if entry_found is None:
