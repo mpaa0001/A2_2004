@@ -581,28 +581,33 @@ Auxiliary Space Complexity: O(NM + M)
                         if entry[0] == pattern_key: #O(1)  time: store refercne to the found entry
                             entry_found = entry     #O(1) time: stop linear search
                             break
-
+                    
+                    # O(1) time; check if pattern is a new one
                     if entry_found is None:
-                        song_indices = [song_id]
-                        pattern_frequ_map.append([pattern_key, song_indices])
-                        frequency = 1
+                        song_indices = [song_id] #o(1) Aux space; creats a new song list
+                        pattern_frequ_map.append([pattern_key, song_indices]) #O(1) time; add new [key, song_list] to the map
+                        frequency = 1 #O(1) time; frequency is 1 , new pattern
                     else:
-                        song_indices = entry_found[1]
-                        added_already = False
+                        song_indices = entry_found[1] #O(1) time: refernece to exsiting song list is retrievd
+                        added_already = False #O(1) time: initialise
 
-                        for previous_id in song_indices:
-                            if previous_id == song_id:
-                                added_already = True
-                                break
-                        if not added_already:
-                            song_indices.append(song_id)
+                        for previous_id in song_indices: #O(N) time; checks if song_id is there in list, list can have at most N song ids
+                            if previous_id == song_id: # O(1) time; checks id
+                                added_already = True #O(1); flag
+                                break #O(1) time; stops
 
 
-                        frequency = len(song_indices)
+                        if not added_already: #O(1) time; checks if song_id needs to be added
+                            song_indices.append(song_id) # O(1) time; add new song_id to list
 
-                    if frequency > self.max_frequency[pattern_length]:
-                        self.max_frequency[pattern_length] = frequency
-                        self.best_pattern_location[pattern_length] = (song_id, start_index)
+
+                        frequency = len(song_indices) #O(1) time; gets new frequency
+
+
+
+                    if frequency > self.max_frequency[pattern_length]: #O(1) time; check if pattern is best for the length
+                        self.max_frequency[pattern_length] = frequency #O(1) time; max frequency is updated
+                        self.best_pattern_location[pattern_length] = (song_id, start_index) #O(1) time; location of pattern is stored
                     
                     
     def getFrequentPattern(self, K):
