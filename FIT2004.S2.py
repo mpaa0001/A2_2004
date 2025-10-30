@@ -300,6 +300,7 @@ Time Complexity Analysis:
         tail = 0 #O(1) time; intialise queue tail pointer
         queue[tail] = source   # O(1) time; Add source node to queue
         visited[source] = True # O(1) time; mark source as visited
+        tail += 1 
 
         while head < tail: # O(V) = O(S) time loop; BFS explores each node at most once
             u = queue[head] # O(1) time; dequeue a node
@@ -498,55 +499,31 @@ Time Complexity Analysis:
 ##QUESTION 2##
 class Analyser:
     """
-    Implements a music pattern analyser that identifies the most frequent transposable motif of a specified length K.
     """
     def __init__(self, sequences):
-        """
-        Function Description:
-        Preprocesses all song sequences to determine, 
-        for every possible pattern length, which transposable pattern 
-        occurs most frequently.
+       
         
-        Approach Description:
-
-       1. Stores all input sequences.
-       2.Creates lists to track, for each pattern length K, 
-       the highest observed frequency and the best (song_id, start_index) location.
-       3.Maintains a pattern_frequ_map list to record pattern frequencies
-       4.Enumerates all O(N · M²) contiguous subsequences by iterating over every song (N), 
-       every possible start index (M), and every possible end index (M).
-      5.For each subsequence, computes a rolling hash based on the intervals between consecutive notes
-      6.Searches linearly through pattern_frequ_map to find the entry matching the pair (pattern_length, hash).
-      7.Updates the stored frequency for that pattern, ensuring each song only contributes once per unique pattern.
-      8.If this updated frequency is now the highest for that pattern length, records the location of the subsequence (song_id, start_index) as the current best.
-
-Time Complexity: O(N² · M⁴)
-N = number of sequences
-M = length of the longest sequence
-P = number of unique patterns, which in the worst case is O(N · M²)
-
-The outer nested loops over songs and subsequences together run O(N · M²) times.
-For each subsequence, the algorithm performs a linear search over pattern_frequ_map.
-pattern_frequ_map can grow to include all distinct patterns encountered so far, which is O(P), and P can be as large as O(N · M²).
-So the inner search costs O(N · M²) in the worst case.
-Multiplying these together gives the total time:
-O(N · M²) (subsequence generation) x O(N · M²) (linear search per subsequence)
-= O(N² · M⁴).
-
-Auxiliary Space Complexity: O(NM + M)
--self.sequences: Uses O(NM) space to store all notes across all sequences.
--self.max_frequency: Uses O(M) space to track the best frequency for each pattern length.
--self.best_pattern_location: Uses O(M) space to track the best (song_id, start_index) for each pattern length.
--pattern_frequ_map (local): Exists only during __init__. 
-  At its peak it can reach O(N² M²) space in the worst case (because it can store up to O(N · M²) unique patterns, each of which may track per-song usage), 
-  but this is temporary and is not kept in the final object.
--Final stored space: O(NM + M) = O(NM), which satisfies the required O(NM) space bound.
-
-        """
-        
-        self.sequences = sequences #O(1) time; store reference to sequences
-        
+        self.sequences = sequences[:] #O(1) time; store reference to sequences
         N= len(sequences) #O(N) time; finds the numver of seuqences
+        
+        M= 0 
+        for song in sequences:
+            song_len = len(song)
+            if song_len > M:
+                M = song_len
+
+        self.max_length = M
+
+        self.best_frequency = [0] * (M + 1)
+        self.best_song = [-1] * (M + 1)
+        self.best_start = [-1] * (M + 1)
+
+        if N == 0:
+            return
+        if M < 2:
+            return 
+        
+        
         max_length = 0 # O(1) time; intilaises max_length
         for s in sequences: #O(N) time loop; finds longest sequence length M
             max_length = max(max_length, len(s)) # O(1) time; finds length and max 
