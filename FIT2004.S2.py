@@ -571,6 +571,25 @@ class Analyser:
 
         if K < 2 or K > self.max_length:
             return []
+        
+        song_id = self.best_song[K]
+        if song_id == -1:
+            return []
+
+        start_index = self.best_start[K]
+        if start_index == -1:
+            return []
+        
+        song_string = self.sequences[song_id]
+        pattern_string = song_string[start_index : start_index + K]
+
+        pattern_list = [None] * len(pattern_string)
+        i = 0
+        while i < len(pattern_string):
+            pattern_list[i] = pattern_string[i]
+            i += 1
+
+        return pattern_list
 
 
     
@@ -585,107 +604,3 @@ class Analyser:
 
 
 
-
-
-        max_length = 0 # O(1) time; intilaises max_length
-        for s in sequences: #O(N) time loop; finds longest sequence length M
-            max_length = max(max_length, len(s)) # O(1) time; finds length and max 
-
-
-        self.max_frequency = [0 for _ in range(max_length + 1)] #O(M) time and space: list to store hgihest frequency found for each length
-        self.best_pattern_location = [None for _ in range(max_length + 1)]  #O(M) time and space ' list to store the song_id and start_index of the best pattern
-
-        pattern_frequ_map = [] #O(1) time; intilaises a list to be used as a hash map
-                              
-        BASE = 37 # O(1) time; prime base for the rolling hash
-
-        for song_id, song in enumerate(self.sequences): #O(N) time loop: iterates each song
-            song_len = len(song) #O(1) time: length of current song
-
-            for start_index in range(song_len): # O(M) start of subsequence, iterates through each possible start character
-                rolling_hash = 0 #O(1) time: reset hash for each of the new position
-
-                #O(M) time: iterate through each possible end character
-                for end_index in range(start_index + 1, song_len): # O(M) - end of subsequence
-                    interval = ord(song[end_index]) - ord(song[end_index - 1]) #O(1) time; interval between notes, Rolling Hash Calculation
-                    rolling_hash = (rolling_hash * BASE) + interval #O(1) time; update rolling hash
-
-                    pattern_length = end_index - start_index + 1 #O(1) time; calcualte pattern legnth
-                    pattern_key = (pattern_length, rolling_hash) #O(1) timel key for the pattern (lenght, hash) is created
-
-                    #map look up  (list based)
-                    
-                    entry_found = None #O(1) time; initalises found flag 
-                    for entry in pattern_frequ_map: #O(P) time: linear search for the pattern key, P is number of unique patterns found so far
-                                                    #P can be up to O(N * M^2)
-                        if entry[0] == pattern_key: #O(1)  time: store refercne to the found entry
-                            entry_found = entry     #O(1) time: stop linear search
-                            break
-                    
-                    # O(1) time; check if pattern is a new one
-                    if entry_found is None:
-                        song_indices = [song_id] #o(1) Aux space; creats a new song list
-                        pattern_frequ_map.append([pattern_key, song_indices]) #O(1) time; add new [key, song_list] to the map
-                        frequency = 1 #O(1) time; frequency is 1 , new pattern
-                    else:
-                        song_indices = entry_found[1] #O(1) time: refernece to exsiting song list is retrievd
-                        added_already = False #O(1) time: initialise
-
-                        for previous_id in song_indices: #O(N) time; checks if song_id is there in list, list can have at most N song ids
-                            if previous_id == song_id: # O(1) time; checks id
-                                added_already = True #O(1); flag
-                                break #O(1) time; stops
-
-
-                        if not added_already: #O(1) time; checks if song_id needs to be added
-                            song_indices.append(song_id) # O(1) time; add new song_id to list
-
-
-                        frequency = len(song_indices) #O(1) time; gets new frequency
-
-
-
-                    if frequency > self.max_frequency[pattern_length]: #O(1) time; check if pattern is best for the length
-                        self.max_frequency[pattern_length] = frequency #O(1) time; max frequency is updated
-                        self.best_pattern_location[pattern_length] = (song_id, start_index) #O(1) time; location of pattern is stored
-                    
-                    
-    def getFrequentPattern(self, K):
-        """
-Function Description:
-    Returns the most frequent transposable pattern of a given length K.
-
-Method:
-    Uses the precomputed `self.best_pattern_location` array to get, in O(1) time,
-    the (song_id, start_index) of the best pattern of length K.
-    It then extracts that substring from `self.sequences` and converts it
-    into a list of characters before returning it.
-
-Time Complexity: O(K)
-    - O(1): Accessing and validating the entry in `self.best_pattern_location`.
-    - O(K): Extracting the substring `[start : start + K]` constructs a new string of length K.
-    - O(K): Converting that string to a list with `list(...)` takes another O(K).
-    - Overall: O(K), which satisfies the required bound.
-
-Space Complexity: O(K)
-    - O(K): The sliced substring is a new string of length K.
-    - O(K): The returned list of characters is also length K.
-    - Overall: O(K).
-"""
-
-        if K >= len(self.best_pattern_location): #O(1) time; chekcs if K is out of bounds
-            return [] #O(1) time; returns an empty list
-        if self.best_pattern_location[K] is None: #O(1) time; checks if any pattern of length K was found
-            return [] #O(1) time; returns an empty list
-        
-
-        location = self.best_pattern_location[K] #O(1) timel pre computed location
-        song_index = location[0] #O(1) timel song index unpacked
-        start_index = location[1]   #O(1) time; start index unpacked
-
-        song_with_best_pattern = self.sequences[song_index] #O(1) time; reference to full song string is then retrived
-
-        pattern_string = song_with_best_pattern[start_index:start_index + K] #O(K) time and space; slice pattern from the song
-        return list(pattern_string) #O(K) time and space; string is converted to list of characters
-    
-    
