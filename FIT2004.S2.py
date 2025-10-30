@@ -115,7 +115,7 @@ Time Complexity Analysis:
 
 
 
-    # 2. finds unique pickup points (P<=18) #
+    # 2. Finds unique pickup points (P<=18) #
     unique_pickup_points = []  #O(P) = O(1) aux space as it stores unique location IDS
     buses_at_pickup_point = [] # O(P) = O(1) aux spacw as it stores list of bus IDS at each of the unique point
     pickup_to_index = [-1] * L # O(L) time and space; a has map using a list is used to find pickup index in O(1)
@@ -216,7 +216,7 @@ Time Complexity Analysis:
         index += 1
 
 
-     # Flow Network
+     # 4. Build Max Flow Statement
     # O(1) time: define node indices
     NETWORK_SOURCE = 0
     NETWORK_SINK = 1
@@ -235,8 +235,8 @@ Time Complexity Analysis:
         Adds a bidirectional edge pair to represent a single directed edge
         in a residual graph for max-flow.
         
-        1.  A "forward edge" (u->v) is added with the given capacity.
-        2.  A "reverse edge" (v->u) is added with 0 capacity. This edge
+        A "forward edge" (u->v) is added with the given capacity.
+        A "reverse edge" (v->u) is added with 0 capacity. This edge
             will hold "residual capacity" if flow is pushed along the
             forward edge.
             
@@ -255,6 +255,42 @@ Time Complexity Analysis:
         graph[v].append([u, len(graph[u]) - 1, 0]) # O(1) time; append reverse edge
 
     def bfs_find_path(source, sink, limit):
+        """
+        Finds one augmenting path from `source` to `sink` in the current
+        residual graph using a Breadth-First Search (BFS).
+        
+        Algorithm:
+          - A standard BFS is initiated from the `source`.
+          - only traverses edges that have a residual capacity > 0.
+          - It uses `visited` to avoid cycles and redundant work.
+          - `parent_node` and `parent_edge` are used to store the path taken.
+          - If the `sink` is reached, the function immediately stops and
+            reconstructs the path by backtracking using the parent arrays.
+          - While reconstructing, it finds the "bottleneck" (smallest) capacity of the
+            path 
+        
+        Time: O(V + E) in the worst case.
+          - `V` is the number of nodes, `E` is the number of edges.
+          - O(V): Initializing the `visited`, `parent_node`, `parent_edge`,
+            and `queue` lists.
+          - O(V): The main `while head < tail` loop dequeues each node at
+            most once.
+          - O(E): The inner `while j < len(adjacent_u)` loop checks each
+            edge at most once (for a directed graph).
+          - O(V): The path reconstruction `while walk_node != source` loop
+            visits at most V nodes.
+          - Total: O(V + E)
+          - V = O(S+B) and E = O(S*B).Assume B=O(1),  simplifies to V=O(S) and E=O(S).
+          - Therefore, the time is O(S + S) = O(S).
+
+        Space: O(V) in the worst case.
+          - `visited`, `parent_node`, `parent_edge`, and `queue` all
+            require lists of size `NODE_COUNT` (which is V).
+          - Worst-case occurs when the queue holds O(V) nodes 
+          - Total: O(V).
+          - In this problem: V = O(S+B) = O(S) (since B=O(1)).
+          - The space is O(S).
+        """
         visited = [False] * NODE_COUNT # O(V) = O(S) time and space; intialise visted list
         parent_node = [-1] * NODE_COUNT # O(V) = O(S) time and space; store paretn node in the BFSpath
         parent_edge = [-1] * NODE_COUNT # O(V) = O(S) time and space; store edge  index used to reach node
@@ -302,6 +338,35 @@ Time Complexity Analysis:
         return 0, parent_node, parent_edge #O(1) time: no path found, retun 0 flow
     
     def maxflow(source, sink, flow_limit):
+        """
+        Computes the maximum flow from source to sink up to a given limit
+        using the Edmonds-Karp algorithm
+        
+        Algorithm:
+          -Repeatedly finds the shortest augmenting path in reference to number of edges 
+          from source to sink in the residual graph using BFS (`bfs_find_path`).
+          -For each path found, determines the minimum residual capacity along the path and pushes that amount of flow.
+          -Updates the residual capacities of the edges and their reverse edges
+          - Continues until no more augmenting paths can be found or `flow_limit` reached
+        
+
+        Time: O(F * E) in general, where F is the max flow and E is edges.
+          - Each `bfs_find_path` takes O(E).
+          - Number iterations of the while loop is at most F if all capacities are integers.
+          - Worst Case: The algorithm might repeatedly find paths that augment
+            the flow by only 1 unit, requiring F iterations. 
+            - E = O(S*B) = O(S) (since B=O(1)).
+            - F = `flow_limit` = O(T) in the calls made.
+            - Therefore, the time complexity here is O(T * S) = O(S*T).
+            
+        Space: O(V) = O(S)
+          - The function itself uses O(1) auxiliary space for simple variables.
+          - The dominant auxiliary space is used by the call to `bfs_find_path`,
+            which requires O(V) space for its internal lists (queue, visited,
+            parent arrays).
+          - V = O(S+B) = O(S) (since B=O(1)).
+          - Therefore, the space complexity is O(S).
+        """
 
         total_flow = 0 # O(1) time; intilaises total flow
 
@@ -354,64 +419,87 @@ Time Complexity Analysis:
         demand[bus_node] -= lower_bound # O(1) time; add negative demand to bus node 
         demand[NETWORK_SINK] += lower_bound # O(1) timel add psotive demand to sink node as it supplies flow
 
-    helper_edge_index_at_sink = len(graph[NETWORK_SINK]) 
-    add_edge(NETWORK_SINK, NETWORK_SOURCE, infinity)
 
-    total_demand = 0
-    node = 0
+    # 5. Feasibility Flow 
+    helper_edge_index_at_sink = len(graph[NETWORK_SINK])  #O(1) time; stores index of the SINK-> SOURCE edge for later
+    add_edge(NETWORK_SINK, NETWORK_SOURCE, infinity) #O(1) time; add helper edge to allow circulation
+
+    total_demand = 0 # O(1) timel intialises total positve demand
+    node = 0 # O(V) = O(S) time loop; iterate all nodes
     while node < NODE_COUNT:
-        d = demand[node]
-        if d > 0:
-            add_edge(DEMAND_SUPER_SOURCE, node, d)
-            total_demand += d
-        elif d < 0:
-            add_edge(node, DEMAND_SUPER_SINK, -d)
-        node += 1
 
-    feasible_flow = maxflow(DEMAND_SUPER_SOURCE, DEMAND_SUPER_SINK, total_demand)
-    if feasible_flow < total_demand:
-        return None
+        d = demand[node] #O(1) time; get demand for node
+        if d > 0: #O(1) time; checks if its a supply node
+            add_edge(DEMAND_SUPER_SOURCE, node, d) #O(1) timel add edge from supersource to supply node
+            total_demand += d # O(1) time; add to total demand
+        elif d < 0: #O(1) time; check if its a demand node
+            add_edge(node, DEMAND_SUPER_SINK, -d) # O(1) timel add edge from demand node to SuperSInk
+        node += 1 #O(1) time; increment 
+
+    feasible_flow = maxflow(DEMAND_SUPER_SOURCE, DEMAND_SUPER_SINK, total_demand) #O(F * E) = O(T * S) time; run feasability flow
+    if feasible_flow < total_demand: #0(1) timel check if all minimum demans were met 
+        return None #O(1) time; if not, there is not possible solution
     
+
+
+    # 6. Augmenting  
+    # O(1) time; get SINK -> SOURCE helper edge    
     forward = graph[NETWORK_SINK][helper_edge_index_at_sink]
-    forward[CAPACITY] = 0
-    graph[NETWORK_SOURCE][forward[REV_INDEX]][CAPACITY] = 0
+    forward[CAPACITY] = 0 #0(1) time; disbale it by setting its capacity to 0
+    graph[NETWORK_SOURCE][forward[REV_INDEX]][CAPACITY] = 0 # O(1) time; disbale its reverse edge
 
 
-    extra_needed = T - total_min
-    if extra_needed < 0:
+    extra_needed = T - total_min # O(1) timel remaining flow needed to reach T is calculated 
+    if extra_needed < 0: #O(1) time; check if impossible as T>- total_min
         return None 
+    
+
+    # O(T*S) time; push extra flow 
     if maxflow(NETWORK_SOURCE, NETWORK_SINK, extra_needed) != extra_needed:
-        return None
+        return None # O(1) time; if exact amount cannot be pushed , then it is a fail
         
-    allocation = [-1] * S
-    for student_id in range(S):
-        u = STUDENT_NODE_START + student_id
-        j = 0
-        while j < len(graph[u]):
-            e = graph[u][j]
-            v = e[DEST]
-            if BUS_NODE_START <= v < BUS_NODE_START + B:
-                if graph[v][e[REV_INDEX]][CAPACITY] > 0:
-                    allocation[student_id] = v - BUS_NODE_START
-                    break    
-            j += 1  
+
+
+
+    # 7. Extracting the Allocations
+     # Allocation
+
+
+    allocation = [-1] * S # O(S) time and space; final allocation list is intialised 
+    for student_id in range(S): #O(S) time loop; checks each student
+        u = STUDENT_NODE_START + student_id # O(1) time; student's node ID
+        j = 0 # O(1) time; intilasies edge index
+        while j < len(graph[u]): #O(1) time loop; checks outgoing edges
+            e = graph[u][j] # O(1) time; get edge
+            v = e[DEST]  # O(1) time; gets destination
+            if BUS_NODE_START <= v < BUS_NODE_START + B: #  O(1) time; this double checks if the edge does go to a bus
+                if graph[v][e[REV_INDEX]][CAPACITY] > 0:  # O(1) time; checks if the reverse edge has a flow
+                    allocation[student_id] = v - BUS_NODE_START #O(1) time; if reverse has a flow, then this student was assigned to this bus
+                    break     # O(1) time; search for student is stopped
+            j += 1  #O(1) time; goes to next edge
             
+    # O(S) time; final check to ensure that there is exaclty T students that were assigned
     assigned_count = 0
     i = 0
     while i < S:
         if allocation[i] != -1:
             assigned_count += 1
         i += 1
+
+    # O(1) time; checks count
     if assigned_count != T:
-        return None
+        return None 
         
-    return allocation
+    return allocation #O(1) time; return final allocation
 
 
 
 
 ##QUESTION 2##
 class Analyser:
+    """
+    Implements a music pattern analyser that identifies the most frequent transposable motif of a specified length K.
+    """
     def __init__(self, sequences):
         
         self.sequences = sequences
