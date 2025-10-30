@@ -152,108 +152,154 @@ Time Complexity Analysis:
 
 
 
-    
+    # 3. Dijkstra's algorithm
     def dijkstra_from(start_loc):
-        distance = [infinity] * L
-        distance[start_loc] = 0
-        heap = [(0, start_loc)]
+        """
+        Runs Dijktra's from the start_loc, stopping ealry if the curr_dist  > D
+        Time: O((L+R) log L). Using heapq (binary heap)
+        - O(L log L): in the worst case, where each of the L locations is popped from heap once
+        - O(R log L): in worst case, relax all R roads and each relaxation pushes new entry onto heap
+        - Worst case happens when graph is connected and most locations are reachable therefore requiring exploaration of 
+        all the roads and locations
 
+        Space: O(L)
+        - 'distance' list : O(L)
+        - 'heap' : O(L) in worst case
+        
+        """
+        distance = [infinity] * L #O(L) time and space; intialises disantce list to infinty
+        distance[start_loc] = 0 #O(1) time: set start locaiton to distance to 0
+        heap = [(0, start_loc)] # O(1) time and space: intialises priority queue (heap)
+
+
+        #O(L log L + R) time: main Dijkstra loop
+        #Pops O(L) nodes in worst case, O(log L) per pop
+        # Pushes O(R) edges in worst case, O (log L ) per push 
         while heap:
-            curr_dist, u = heapq.heappop(heap)
-            if curr_dist != distance[u]:
+            curr_dist, u = heapq.heappop(heap) # O(log L) time: pop node with smallest distance
+            if curr_dist != distance[u]: # O(1) time: stale entries skipped
                 continue
-            if curr_dist > D:
+            if curr_dist > D: # O(1 ) time: optimisation; if minimum distance is > D, no path from here will work
                 break
-            for v, w in adjacent_list[u]:
-                new_distance = curr_dist + w
-                if new_distance <= D and new_distance < distance[v]:
-                    distance[v] = new_distance
-                    heapq.heappush(heap, (new_distance, v))
-        return distance
+
+            # Total iterations acorss all 'while' loops is O(R)
+            for v, w in adjacent_list[u]: 
+                new_distance = curr_dist + w # O(1) time: calcualte new distance
+                if new_distance <= D and new_distance < distance[v]: # O(1) time; check if path is shorter and within distance D
+                    distance[v] = new_distance # O(1) time: updates distance
+                    heapq.heappush(heap, (new_distance, v)) # O(log L) time: push new and shorter path to heap
+        return distance # O(1) time: returns computed distance list
 
     
-    #reachability
+    # Student to Bus Reachability 
+
+    # O(B) = O(1) aux space: stores lists of studetns reachable for each bus
     reachable_by_bus = [[] for _ in range(B)]
+    # O(S) aux space : stores lists of buses reachable by each student
     buses_by_student = [[] for _ in range(S)]
 
+    # O(1) time: intialsies index
     index = 0
-    while index < len(unique_pickup_points):
-        pickup_location = unique_pickup_points[index]
-        distance = dijkstra_from(pickup_location)
-        bus_list = buses_at_pickup_point[index]
+    while index < len(unique_pickup_points): # O(P) = O(1) time loop; loop P times (P<= 18)
+        pickup_location = unique_pickup_points[index] # O(1) time: get unique pickup location ID
+        distance = dijkstra_from(pickup_location) #O(R + L log L) time: run Dijkstra's from this lcoation
+        bus_list = buses_at_pickup_point[index] #O(1) time: get list of bus IDs at this location
         
-       
+       # O(S) time loop: check reachability for all S students
         for student_id, student_loc in enumerate(students): 
-            if distance[student_loc] <= D:
-                for bus_id in bus_list:
-                    reachable_by_bus[bus_id].append(student_id)
-                    buses_by_student[student_id].append(bus_id)
-
+            if distance[student_loc] <= D: # O(1) time: check if student can reach this location
+                for bus_id in bus_list: # O(B) iterate buses at this point 
+                    reachable_by_bus[bus_id].append(student_id) # O(1 ) time; add student to bus's list
+                    buses_by_student[student_id].append(bus_id) # O(1) time; add bus to student's list 
+        
+        # O(1) time; increment index
         index += 1
 
-    # flow network
+
+     # Flow Network
+    # O(1) time: define node indices
     NETWORK_SOURCE = 0
     NETWORK_SINK = 1
     STUDENT_NODE_START = 2
     BUS_NODE_START = STUDENT_NODE_START + S
     DEMAND_SUPER_SOURCE = BUS_NODE_START + B
     DEMAND_SUPER_SINK = DEMAND_SUPER_SOURCE + 1
-    NODE_COUNT = DEMAND_SUPER_SINK + 1
+    NODE_COUNT = DEMAND_SUPER_SINK + 1 # total nnodes V = S + b + 4
 
-    DEST, REV_INDEX, CAPACITY = 0, 1, 2
+    DEST, REV_INDEX, CAPACITY = 0, 1, 2 # O(1) time: define edge tuple indices for clarity
 
-    graph = [[] for _ in range(NODE_COUNT)]
+    graph = [[] for _ in range(NODE_COUNT)] # O(V) = O(S +B) = O(S) aux space; initalsies flow graph
 
     def add_edge(u, v, cap_value):
+        """
+        Adds a bidirectional edge pair to represent a single directed edge
+        in a residual graph for max-flow.
+        
+        1.  A "forward edge" (u->v) is added with the given capacity.
+        2.  A "reverse edge" (v->u) is added with 0 capacity. This edge
+            will hold "residual capacity" if flow is pushed along the
+            forward edge.
+            
+        The `rev` index points to the reverse edge in the other node's
+        adjacency list, allowing O(1) lookup to update the reverse
+        edge's capacity when the forward edge is used.
+
+        Time: O(1) 
+          - `list.append()` is O(1) on average 
+          - Worst-case: O(N) where N is the number of elements in the
+            list, if the list's underlying array needs to be resized and copied. 
+        """
         # forward edge
-        graph[u].append([v, len(graph[v]), cap_value])
+        graph[u].append([v, len(graph[v]), cap_value]) # O(1) time; append forward edge
         # backward edge
-        graph[v].append([u, len(graph[u]) - 1, 0])
+        graph[v].append([u, len(graph[u]) - 1, 0]) # O(1) time; append reverse edge
 
     def bfs_find_path(source, sink, limit):
-        visited = [False] * NODE_COUNT
-        parent_node = [-1] * NODE_COUNT
-        parent_edge = [-1] * NODE_COUNT
+        visited = [False] * NODE_COUNT # O(V) = O(S) time and space; intialise visted list
+        parent_node = [-1] * NODE_COUNT # O(V) = O(S) time and space; store paretn node in the BFSpath
+        parent_edge = [-1] * NODE_COUNT # O(V) = O(S) time and space; store edge  index used to reach node
 
-        queue = [0] * NODE_COUNT
-        head = 0
-        tail = 0
-        queue[tail] = source 
-        tail += 1
-        visited[source] = True
+        queue = [0] * NODE_COUNT # O(V) = O(S) aux space; intilaises a list based queue
+        head = 0 # O(1) time; intilaises queue head pointer
+        tail = 0 #O(1) time; intialise queue tail pointer
+        queue[tail] = source   # O(1) time; Add source node to queue
+        visited[source] = True # O(1) time; mark source as visited
 
-        while head < tail:
-            u = queue[head]
-            head += 1
-            adjacent_u = graph[u]
+        while head < tail: # O(V) = O(S) time loop; BFS explores each node at most once
+            u = queue[head] # O(1) time; dequeue a node
+            head += 1 # O(1) time; increment head
+            adjacent_u = graph[u] #O(1) time; get adjaceny list for node u
 
+
+            # iterate through all neighbours
+            #O(E)= O(S) total for all loops
             j=0
-            while j < len(adjacent_u):
-                e = adjacent_u[j]
-                if e[CAPACITY] > 0:
-                    v = e[DEST]
-                    if not visited[v]:
-                        visited[v] = True
-                        parent_node[v] = u
-                        parent_edge[v] = j
+            while j < len(adjacent_u):  
+                e = adjacent_u[j] #O(1) time; edge
+                if e[CAPACITY] > 0: #O(1) time; check if there is capacity
+                    v = e[DEST] #O(1) time; check if visited
+                    if not visited[v]: #O(1) time; desitnation node
+                        visited[v] = True # O(1) time; mark visited
+                        parent_node[v] = u #O(1) time; set parent
+                        parent_edge[v] = j # O(1) time ; set edge index
 
-                        if v == sink:
-                            bottleneck = limit
-                            walk_node = sink
-                            while walk_node != source:
-                                prev_node = parent_node[walk_node]
-                                prev_edge_index = parent_edge[walk_node]
-                                edge_capacity = graph[prev_node][prev_edge_index][CAPACITY]
-                                if edge_capacity < bottleneck:
-                                    bottleneck = edge_capacity
-                                walk_node = prev_node
-                            return bottleneck, parent_node, parent_edge
+                        if v == sink: #O(1) time; check if sink is reached
+                            bottleneck = limit # O(1 time); set initial bottleneck
+                            walk_node = sink # O(1) time; start walk back from sink
+                            while walk_node != source: # O(V) = 0(S) time loop; walk back to source
+                                prev_node = parent_node[walk_node] #O(1) time; gets parent node
+                                prev_edge_index = parent_edge[walk_node] ##O(1) time; gets the edge index from parent
+                                edge_capacity = graph[prev_node][prev_edge_index][CAPACITY] #O(1) time; get capacity of edge
+                                if edge_capacity < bottleneck: #O(1) time; update bottleneck if this edge is smaller
+                                    bottleneck = edge_capacity 
+                                walk_node = prev_node # O(1) time; move to parent
+                            return bottleneck, parent_node, parent_edge # O(1) time; return flow and path info
                         
-                        queue[tail] = v
-                        tail += 1
-                j += 1
+                        queue[tail] = v #O(1) time; add node to queue
+                        tail += 1 # O(1) time: increment tail
+                j += 1 #O(1) time: go to next edge
 
-        return 0, parent_node, parent_edge
+        return 0, parent_node, parent_edge #O(1) time: no path found, retun 0 flow
     
     def maxflow(source, sink, flow_limit):
         total_flow = 0
