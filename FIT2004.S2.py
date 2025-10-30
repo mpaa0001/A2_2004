@@ -565,6 +565,17 @@ class Analyser:
                                 self.best_start[K] = start_pos
 
 
+    def getFrequentPattern(self, K):
+        if K >= len(self.best_song) or K >= len(self.best_start):
+            return []
+
+        if K < 2 or K > self.max_length:
+            return []
+
+
+    
+
+
 
 
     
