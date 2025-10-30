@@ -611,19 +611,41 @@ Auxiliary Space Complexity: O(NM + M)
                     
                     
     def getFrequentPattern(self, K):
-        if K >= len(self.best_pattern_location):
-            return []
-        if self.best_pattern_location[K] is None:
-            return []
+        """
+Function Description:
+    Returns the most frequent transposable pattern of a given length K.
+
+Method:
+    Uses the precomputed `self.best_pattern_location` array to get, in O(1) time,
+    the (song_id, start_index) of the best pattern of length K.
+    It then extracts that substring from `self.sequences` and converts it
+    into a list of characters before returning it.
+
+Time Complexity: O(K)
+    - O(1): Accessing and validating the entry in `self.best_pattern_location`.
+    - O(K): Extracting the substring `[start : start + K]` constructs a new string of length K.
+    - O(K): Converting that string to a list with `list(...)` takes another O(K).
+    - Overall: O(K), which satisfies the required bound.
+
+Space Complexity: O(K)
+    - O(K): The sliced substring is a new string of length K.
+    - O(K): The returned list of characters is also length K.
+    - Overall: O(K).
+"""
+
+        if K >= len(self.best_pattern_location): #O(1) time; chekcs if K is out of bounds
+            return [] #O(1) time; returns an empty list
+        if self.best_pattern_location[K] is None: #O(1) time; checks if any pattern of length K was found
+            return [] #O(1) time; returns an empty list
         
 
-        location = self.best_pattern_location[K]
-        song_index = location[0]
-        start_index = location[1]   
+        location = self.best_pattern_location[K] #O(1) timel pre computed location
+        song_index = location[0] #O(1) timel song index unpacked
+        start_index = location[1]   #O(1) time; start index unpacked
 
-        song_with_best_pattern = self.sequences[song_index]
+        song_with_best_pattern = self.sequences[song_index] #O(1) time; reference to full song string is then retrived
 
-        pattern_string = song_with_best_pattern[start_index:start_index + K]
-        return list(pattern_string)
+        pattern_string = song_with_best_pattern[start_index:start_index + K] #O(K) time and space; slice pattern from the song
+        return list(pattern_string) #O(K) time and space; string is converted to list of characters
     
     
