@@ -302,51 +302,57 @@ Time Complexity Analysis:
         return 0, parent_node, parent_edge #O(1) time: no path found, retun 0 flow
     
     def maxflow(source, sink, flow_limit):
-        total_flow = 0
 
-        while total_flow < flow_limit:
-            remaining = flow_limit - total_flow
-            pushed, parent_node, parent_edge = bfs_find_path(source, sink, remaining)
-            if pushed == 0:
+        total_flow = 0 # O(1) time; intilaises total flow
+
+        while total_flow < flow_limit: # O(F) = O(flow_limit) time loop; find F augmenting paths
+            remaining = flow_limit - total_flow # O(1) time; remainig flow needed is calcuated 
+            pushed, parent_node, parent_edge = bfs_find_path(source, sink, remaining) # O(E) = O(S) time; find one augmenting path
+            if pushed == 0: #O(1) time; stop if no path is found
                 break
             
-            node = sink
+            node = sink #O(V) = O(S) time; augment path
             while node != source:
-                prev_node = parent_node[node]
-                edge_index = parent_edge[node]
-                e = graph[prev_node][edge_index]
-                e[CAPACITY] -= pushed
-                rev_edge_index = e[REV_INDEX]
-                graph[node][rev_edge_index][CAPACITY] += pushed
-                node = prev_node
+                prev_node = parent_node[node] #O(1) time; parent
+                edge_index = parent_edge[node] # O(1) time; edge index is gotten from parent
+                e = graph[prev_node][edge_index] # O(1) time; get forward edge
+                e[CAPACITY] -= pushed #O(1) time subtract capacity from forward edge
+                rev_edge_index = e[REV_INDEX] # O(1) time; reverse edge index
+                graph[node][rev_edge_index][CAPACITY] += pushed #O(1) time; add capacity to reverse edge 
+                node = prev_node #O(1) time; move to parent
 
-            total_flow += pushed
+            total_flow += pushed #O(1) time; add pushed flow to total
 
-        return total_flow
+        return total_flow #O(1) time; return total flow pushed
     
+
+    # SOURCE -> students
+    # O(S) time loop
     student_id = 0
     while student_id < S:
-        add_edge(NETWORK_SOURCE, STUDENT_NODE_START + student_id, 1)
-        student_id += 1
+        add_edge(NETWORK_SOURCE, STUDENT_NODE_START + student_id, 1) #O(1) time; add edge from source to student
+        student_id += 1 #O(1) time; increment 
 
     
     # student -> bus
+    #O(B) =O(1) time loop
     for bus_id in range(B):
-        bus_node = BUS_NODE_START + bus_id
-        reachable_students = reachable_by_bus[bus_id]
-        for student_id in reachable_students:
-            add_edge(STUDENT_NODE_START + student_id, bus_node, 1)
+        bus_node = BUS_NODE_START + bus_id # O(1) time; get bus node ID
+        reachable_students = reachable_by_bus[bus_id] # O(1) time; list of studetns who can reach this bus
+        for student_id in reachable_students: #O(S) time loop
+            add_edge(STUDENT_NODE_START + student_id, bus_node, 1) # O(1) timel add edge from studetn to bus
         
     # bus -> sink 
+    # O(S) aux space; list to store node demands
     demand = [0] * NODE_COUNT
-    for bus_id in range(B):
-        lower_bound = min_caps[bus_id]
-        upper_bound = max_caps[bus_id]
-        bus_node = BUS_NODE_START + bus_id
+    for bus_id in range(B): #O(B)= O(1) time loop
+        lower_bound = min_caps[bus_id] #O(1) time loop; min capacities
+        upper_bound = max_caps[bus_id] # O(1) time loop; max capacities
+        bus_node = BUS_NODE_START + bus_id #O(1) time; get bus node ID
 
-        add_edge(bus_node, NETWORK_SINK, upper_bound - lower_bound)
-        demand[bus_node] -= lower_bound
-        demand[NETWORK_SINK] += lower_bound
+        add_edge(bus_node, NETWORK_SINK, upper_bound - lower_bound) # O(1); add edge from bus to sink with cap = (max - min)
+        demand[bus_node] -= lower_bound # O(1) time; add negative demand to bus node 
+        demand[NETWORK_SINK] += lower_bound # O(1) timel add psotive demand to sink node as it supplies flow
 
     helper_edge_index_at_sink = len(graph[NETWORK_SINK]) 
     add_edge(NETWORK_SINK, NETWORK_SOURCE, infinity)
