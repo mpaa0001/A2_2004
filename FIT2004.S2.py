@@ -559,44 +559,69 @@ Fields:
         """
 
 
-        
+        # O(N) time to copy list of N song refercnes
+        # O(N*M) space stored in 'self' to hold all the sequences
         self.sequences = sequences[:]
-        N = len(sequences)
+        N = len(sequences) #O(1) time
 
-        M = 0
-        for song in sequences:
-            song_len = len(song)
-            if song_len > M:
-                M = song_len
+        # find M (max_legnth)
+        #O(N) time as loop runs N times and len(song) is O(1)
+        M = 0 # O(1) time
+        for song in sequences: # O(N) loop
+            song_len = len(song) #O(1) time
+            if song_len > M: #O(1) time
+                M = song_len #O(1) time
 
-        self.max_length = M
+        self.max_length = M #O(1) time
 
-        self.best_frequency = [0] * (M + 1)
-        self.best_song      = [-1] * (M + 1)
-        self.best_start     = [-1] * (M + 1)
+        self.best_frequency = [0] * (M + 1) #O(M) time and space
+        self.best_song      = [-1] * (M + 1) #O(M) time and space
+        self.best_start     = [-1] * (M + 1) #O(M) time and space
 
-        if N == 0:
-            return
+        if N == 0: #O(1) time; edge case checks
+            return #O(1) time
         if M < 2:
-            return
+            return #O(1) time
 
+
+        # intialise trie data strcutres
+
+
+        # Max interval = ord('z') - ord('a') = 25
+        # Min interval = ord('a') - ord('z') = -25
+        # map this range to indices [0, ..., 50] by adding 25.
+        # store indices 0 through 50, need a list of length 51.
+
+        # O(1) time and space 
         children = [[-1] * 51]
         pattern_song_count = [0]
         last_seen_in_song = [-1]
 
         def get_child(node_id, step_index):
-            existing = children[node_id][step_index]
-            if existing != -1:
-                return existing
+            """
+            Returns the child node reached by following a given step from the current trie node.
+            If that child does not already exist, a new node is created and returned.
+            This operation runs in O(1) time.    
+            """
+            existing = children[node_id][step_index] #O(1) time; list lookup
+            if existing != -1: #O(1) time
+                return existing #O(1) time
 
-            new_id = len(children)
-            children[node_id][step_index] = new_id
+            # new node is created
+            new_id = len(children) #O(1) time
+            children[node_id][step_index] = new_id #O(1) time; for list assignment 
 
-            children.append([-1] * 51)
-            pattern_song_count.append(0)
-            last_seen_in_song.append(-1)
 
-            return new_id
+            children.append([-1] * 51) #O(1) time append
+            pattern_song_count.append(0) #O(1) time append
+            last_seen_in_song.append(-1)#O(1) time append
+
+            return new_id #O(1) time 
+        
+        #get_child time is O(1)
+
+
+        
 
         for song_id, song_string in enumerate(sequences):
             song_len = len(song_string)
@@ -627,6 +652,31 @@ Fields:
 
 
     def getFrequentPattern(self, K):
+        """
+        Finds and returns the most common K-note motif across all songs, 
+        where it appears in the largest number of distinct songs 
+
+        Args:
+        K (int): The desired pattern length in notes. Must satisfy K ≥ 2.
+
+        Returns:
+        list[str]: A list of characters representing one such K-note pattern.
+        If no valid pattern of length K exists, or K is out of range,
+        this returns an empty list ([]).
+        
+        Time Complexity: O(K)
+        The total runtime grows linearly with the requested pattern length K.
+        Input validation and index lookups use constant time, O(1).
+        Extracting pattern_string = song_string[start_index : start_index + K] copies K characters into  new string O(K).
+        Building  output list in the while loop also visits each of those K characters once, which is O(K).
+        Overall: O(1) + O(K) + O(K) simplifies to O(K).
+
+        Space Complexity: O(K)
+        This measures only the additional memory allocated inside this function.
+        pattern_string is new string of length K → O(K) space.
+        pattern_list is new list of length K → O(K) space.
+        This is still O(K) space, since constants are dropped.
+        """
         if K >= len(self.best_song) or K >= len(self.best_start):
             return []
 
