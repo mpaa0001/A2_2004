@@ -621,34 +621,46 @@ Fields:
         #get_child time is O(1)
 
 
-        
 
+        #outer  loop runs N times
+        #total time: O(N * M^2)
         for song_id, song_string in enumerate(sequences):
-            song_len = len(song_string)
-            if song_len >= 2:
-                steps = [0] * (song_len - 1)
-                for step_pos in range(song_len - 1):
+            song_len = len(song_string) #O(1) time
+            # processes one song
+            #time per song: O(M^2)
+            if song_len >= 2: #O(1) time
+
+                #array of steps built for the song
+                # O(M) time and O(M) space 
+                # M= song_len
+                steps = [0] * (song_len - 1) #O(M) time
+                #O(M) loop 
+                for step_pos in range(song_len - 1): #O(1) time: ord(), sibstraction alogrithim and assingment 
                     steps[step_pos] = (
                         ord(song_string[step_pos + 1]) - ord(song_string[step_pos])
                     )
 
-                for start_pos in range(song_len - 1):
-                    node = 0
+                # O(M) outer looop
+                for start_pos in range(song_len - 1): #iterates al of the O(M^2) sequences from the steps
+                    node = 0   #O(1) time
+
+                    #O(M)  for inner loop
+                    # # for both loops: O(M^2) iterations                        
                     for end_pos in range(start_pos, song_len - 1):
-                        step_index = steps[end_pos] + 25
-                        node = get_child(node, step_index)
+                        step_index = steps[end_pos] + 25 # O(1) time: lookup of list
+                        node = get_child(node, step_index) #O(1) time: call for helper
 
-                        segment_len = end_pos - start_pos + 1
+                        segment_len = end_pos - start_pos + 1 #O(1) time: arithmetic operation
                         K = segment_len + 1
+ 
+                        if last_seen_in_song[node] != song_id: #O(1) time; lookup of list
+                            last_seen_in_song[node] = song_id  # O(1) time; list assimgnet
+                            pattern_song_count[node] += 1 # O(1) time: lookup plus increament
 
-                        if last_seen_in_song[node] != song_id:
-                            last_seen_in_song[node] = song_id
-                            pattern_song_count[node] += 1
-
-                            if pattern_song_count[node] > self.best_frequency[K]:
-                                self.best_frequency[K] = pattern_song_count[node]
-                                self.best_song[K] = song_id
-                                self.best_start[K] = start_pos
+                            if pattern_song_count[node] > self.best_frequency[K]: #O(1) time: list lookup
+                                self.best_frequency[K] = pattern_song_count[node] #O(1) time for assignment
+                                self.best_song[K] = song_id #O(1) time for assignment
+                                self.best_start[K] = start_pos #O(1) time for assignment
 
 
     def getFrequentPattern(self, K):
